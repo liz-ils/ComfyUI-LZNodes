@@ -27,8 +27,8 @@ class StringConcatNode:
             "optional": {}
         }
         
-        # 1〜50個までのテキスト入力ボックスを裏側で定義
-        for i in range(1, 51):
+        # 1〜5個までのテキスト入力ボックスを裏側で定義
+        for i in range(1, 6):
             inputs["optional"][f"text{i}"] = ("STRING", {"multiline": False, "default": ""})
             
         return inputs
