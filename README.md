@@ -29,7 +29,7 @@ This extension provides several quality-of-life nodes that condense common workf
    ```
 2. Clone this repository:
    ```bash
-   git clone <repository_url> ComfyUI-LZNodes
+   git clone https://github.com/liz-ils/ComfyUI-LZNodes
    ```
 3. Restart ComfyUI.
 

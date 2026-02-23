@@ -29,7 +29,7 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
    ```
 2. このリポジトリをクローンします。
    ```bash
-   git clone <repository_url> ComfyUI-LZNodes
+   git clone https://github.com/liz-ils/ComfyUI-LZNodes
    ```
 3. ComfyUI を再起動してください。
 
