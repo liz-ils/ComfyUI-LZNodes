@@ -1,6 +1,6 @@
 // js/text_preview.js
-import { app } from "../../scripts/app.js";
-import { ComfyWidgets } from "../../scripts/widgets.js";
+import { app } from "../../../scripts/app.js";
+import { ComfyWidgets } from "../../../scripts/widgets.js";
 
 app.registerExtension({
     name: "LZ.TextPreview",

@@ -1,6 +1,6 @@
 // js/dynamic_lora.js
 
-import { app } from "../../scripts/app.js";
+import { app } from "../../../scripts/app.js";
 
 app.registerExtension({
     name: "LZ.DynamicLoRAStacker",

@@ -1,5 +1,5 @@
 // js/sampler_progress.js
-import { app } from "../../scripts/app.js";
+import { app } from "../../../scripts/app.js";
 
 app.registerExtension({
     name: "LZ.SamplerProgress",

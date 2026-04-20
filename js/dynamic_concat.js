@@ -1,6 +1,6 @@
 // js/dynamic_concat.js
 
-import { app } from "../../scripts/app.js";
+import { app } from "../../../scripts/app.js";
 
 function updateWidgets(node) {
     if (!node.widgets) return;
