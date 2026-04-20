@@ -1,4 +1,5 @@
-from .py.text_utils import StringNode, StringConcatNode, LZTextPreview, StringCleanNode
+from .py.text_utils import StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV
+from .py.log_csv import LZAppendLogToCSV
 from .py.prompts import DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt
 from .py.loaders import EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker
 from .py.latent import PresetEmptyLatentImage
@@ -19,7 +20,10 @@ NODE_CLASS_MAPPINGS = {
     "LZKSamplerDecode": LZKSamplerDecode,
     "LZLoRAStacker": LZLoRAStacker,
     "LZTextPreview": LZTextPreview,
-    "StringCleanNode": StringCleanNode,
+    "LZStringSanitize": LZStringSanitize,
+    "LZStringSelect": LZStringSelect,
+    "LZSaveStringToCSV": LZSaveStringToCSV,
+    "LZAppendLogToCSV": LZAppendLogToCSV,
     "LZSaveImageAndLog": LZSaveImageAndLog,
     "LZSimpleCheckpointLoader": LZSimpleCheckpointLoader,
 }
@@ -37,7 +41,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZKSamplerDecode": "LZ KSampler & Decode",
     "LZLoRAStacker": "LZ LoRA Stacker",
     "LZTextPreview": "LZ Text Preview",
-    "StringCleanNode": "LZ String Clean",
+    "LZStringSanitize": "LZ String Sanitize",
+    "LZStringSelect": "LZ String Select",
+    "LZSaveStringToCSV": "LZ Save String to CSV",
+    "LZAppendLogToCSV": "LZ Append Log to CSV",
     "LZSaveImageAndLog": "LZ Save Image & Log",
     "LZSimpleCheckpointLoader": "LZ Simple Checkpoint Loader",
 }

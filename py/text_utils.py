@@ -77,7 +77,7 @@ class LZTextPreview:
         return {"ui": {"text": [text]}, "result": (text,)}
 
 
-class StringCleanNode:
+class LZStringSanitize:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -106,3 +106,88 @@ class StringCleanNode:
             text = text[:-1]
         
         return (text,)
+
+
+class LZStringSelect:
+    @classmethod
+    def INPUT_TYPES(s):
+        inputs = {
+            "required": {
+                "count": ("INT", {"default": 2, "min": 2, "max": 10}),
+                "join_mode": (["separator", "newline"],),
+                "separator": ("STRING", {"default": ", "}),
+            },
+            "optional": {}
+        }
+        for i in range(1, 11):
+            inputs["optional"][f"text{i}"] = ("STRING", {"default": ""})
+        return inputs
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("text",)
+    FUNCTION = "select"
+    CATEGORY = "MyCustomNodes/Text"
+
+    def select(self, count, join_mode, separator=", ", **kwargs):
+        texts = []
+        for i in range(1, count + 1):
+            key = f"text{i}"
+            if kwargs.get(key, "").strip():
+                texts.append(kwargs[key].strip())
+        
+        if count == 1:
+            return ("",)
+        
+        join_str = "\n" if join_mode == "newline" else separator
+        return (join_str.join(texts),)
+
+
+class LZSaveStringToCSV:
+    @classmethod
+    def INPUT_TYPES(s):
+        inputs = {
+            "required": {
+                "filepath": ("STRING", {"default": "output.csv"}),
+                "mode": (["write", "append"],),
+                "header": ("STRING", {"default": ""}),
+                "row_data": ("STRING", {"multiline": False}),
+            },
+            "optional": {}
+        }
+        return inputs
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("output_path",)
+    FUNCTION = "save_csv"
+    OUTPUT_NODE = True
+    CATEGORY = "MyCustomNodes/Text"
+
+    def save_csv(self, filepath, mode, header, row_data):
+        import os
+        import csv
+        
+        filepath = filepath.strip()
+        if not filepath:
+            filepath = "output.csv"
+        
+        rows = []
+        write_header = False
+        
+        if mode == "append" and os.path.exists(filepath):
+            with open(filepath, "r", encoding="utf-8") as f:
+                reader = csv.reader(f)
+                rows = list(reader)
+        else:
+            write_header = True
+        
+        if write_header and header:
+            rows.append([h.strip() for h in header.split(",")])
+        
+        if row_data.strip():
+            rows.append([d.strip() for d in row_data.split(",")])
+        
+        with open(filepath, "w", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(rows)
+        
+        return (os.path.abspath(filepath),)
