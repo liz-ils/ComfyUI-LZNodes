@@ -1,4 +1,4 @@
-from .py.text_utils import StringNode, StringConcatNode, LZTextPreview
+from .py.text_utils import StringNode, StringConcatNode, LZTextPreview, StringCleanNode
 from .py.prompts import DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt
 from .py.loaders import EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker
 from .py.latent import PresetEmptyLatentImage
@@ -19,6 +19,7 @@ NODE_CLASS_MAPPINGS = {
     "LZKSamplerDecode": LZKSamplerDecode,
     "LZLoRAStacker": LZLoRAStacker,
     "LZTextPreview": LZTextPreview,
+    "StringCleanNode": StringCleanNode,
     "LZSaveImageAndLog": LZSaveImageAndLog,
     "LZSimpleCheckpointLoader": LZSimpleCheckpointLoader,
 }
@@ -36,6 +37,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZKSamplerDecode": "LZ KSampler & Decode",
     "LZLoRAStacker": "LZ LoRA Stacker",
     "LZTextPreview": "LZ Text Preview",
+    "StringCleanNode": "LZ String Clean",
     "LZSaveImageAndLog": "LZ Save Image & Log",
     "LZSimpleCheckpointLoader": "LZ Simple Checkpoint Loader",
 }

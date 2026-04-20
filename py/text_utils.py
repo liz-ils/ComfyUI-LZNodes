@@ -1,4 +1,4 @@
-﻿# text_utils.py
+# text_utils.py
 
 class StringNode:
     @classmethod
@@ -55,6 +55,8 @@ class StringConcatNode:
         result = separator.join(texts)
         return (result,)
         
+LZBannedChars = r'\/?"<>\:|*'
+
 class LZTextPreview:
     @classmethod
     def INPUT_TYPES(s):
@@ -73,3 +75,34 @@ class LZTextPreview:
 
     def preview(self, text):
         return {"ui": {"text": [text]}, "result": (text,)}
+
+
+class StringCleanNode:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "text": ("STRING", {"multiline": True}),
+                "mode": (["remove", "replace"],),
+            },
+            "optional": {
+                "replace_with": ("STRING", {"default": "_"}),
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("string",)
+    FUNCTION = "clean"
+    CATEGORY = "MyCustomNodes/Text"
+
+    def clean(self, text, mode, replace_with="_"):
+        for char in LZBannedChars:
+            if mode == "remove":
+                text = text.replace(char, "")
+            else:
+                text = text.replace(char, replace_with)
+        
+        if text.endswith("."):
+            text = text[:-1]
+        
+        return (text,)
