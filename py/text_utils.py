@@ -113,7 +113,9 @@ class LZStringSelect:
     def INPUT_TYPES(s):
         inputs = {
             "required": {
-                "select_index": ("INT", {"default": 1, "min": 1, "max": 10}),
+                "count": ("INT", {"default": 2, "min": 2, "max": 10}),
+                "join_mode": (["separator", "newline"],),
+                "separator": ("STRING", {"default": ", "}),
             },
             "optional": {}
         }
@@ -126,12 +128,18 @@ class LZStringSelect:
     FUNCTION = "select"
     CATEGORY = "MyCustomNodes/Text"
 
-    def select(self, select_index, **kwargs):
-        key = f"text{select_index}"
-        selected = kwargs.get(key, "")
-        if isinstance(selected, str):
-            return (selected.strip(),)
-        return ("",)
+    def select(self, count, join_mode, separator=", ", **kwargs):
+        texts = []
+        for i in range(1, count + 1):
+            key = f"text{i}"
+            if kwargs.get(key, "").strip():
+                texts.append(kwargs[key].strip())
+        
+        if count == 1:
+            return ("",)
+        
+        join_str = "\n" if join_mode == "newline" else separator
+        return (join_str.join(texts),)
 
 
 class LZSaveStringToCSV:
