@@ -1,4 +1,4 @@
-from .py.text_utils import StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV
+from .py.text_utils import StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptWeight
 from .py.log_csv import LZAppendLogToCSV
 from .py.prompts import DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt
 from .py.loaders import EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker
@@ -23,6 +23,7 @@ NODE_CLASS_MAPPINGS = {
     "LZStringSanitize": LZStringSanitize,
     "LZStringSelect": LZStringSelect,
     "LZSaveStringToCSV": LZSaveStringToCSV,
+    "LZPromptWeight": LZPromptWeight,
     "LZAppendLogToCSV": LZAppendLogToCSV,
     "LZSaveImageAndLog": LZSaveImageAndLog,
     "LZSimpleCheckpointLoader": LZSimpleCheckpointLoader,
@@ -44,6 +45,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZStringSanitize": "LZ String Sanitize",
     "LZStringSelect": "LZ String Select",
     "LZSaveStringToCSV": "LZ Save String to CSV",
+    "LZPromptWeight": "LZ Prompt Weight",
     "LZAppendLogToCSV": "LZ Append Log to CSV",
     "LZSaveImageAndLog": "LZ Save Image & Log",
     "LZSimpleCheckpointLoader": "LZ Simple Checkpoint Loader",

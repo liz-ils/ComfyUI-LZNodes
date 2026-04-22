@@ -191,3 +191,52 @@ class LZSaveStringToCSV:
             writer.writerows(rows)
         
         return (os.path.abspath(filepath),)
+
+
+class LZPromptWeight:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "prompt": ("STRING", {"multiline": False, "default": ""}),
+                "default_weight": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 1.9, "step": 0.05}),
+                "separator": ("STRING", {"default": ", "}),
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("prompt",)
+    FUNCTION = "process"
+    CATEGORY = "MyCustomNodes/Text"
+
+    def process(self, prompt, default_weight, separator):
+        if not prompt or not prompt.strip():
+            return ("",)
+        
+        parts = [p.strip() for p in prompt.split(",")]
+        result_parts = []
+        
+        for part in parts:
+            if not part:
+                continue
+            
+            if ":" in part:
+                tag, weight_str = part.rsplit(":", 1)
+                tag = tag.strip()
+                try:
+                    weight = float(weight_str)
+                except ValueError:
+                    weight = default_weight
+            else:
+                tag = part.strip()
+                weight = default_weight
+            
+            if weight == 1.0:
+                result_parts.append(tag)
+            elif weight == int(weight):
+                result_parts.append(f"({tag}:{int(weight)})")
+            else:
+                result_parts.append(f"({tag}:{weight})")
+        
+        result = separator.join(result_parts)
+        return (result,)
