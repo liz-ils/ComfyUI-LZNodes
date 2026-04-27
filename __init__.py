@@ -6,6 +6,7 @@ from .py.latent import PresetEmptyLatentImage
 from .py.pipe import LZPipePack, LZPipeUnpack
 from .py.sampling import LZKSamplerDecode
 from .py.image_io import LZSaveImageAndLog
+from .py.merge_recipe import LZMergeRecipeRandom, LZMergeRecipeManual, LZMergeRecipeRandomAdvanced
 
 NODE_CLASS_MAPPINGS = {
     "StringNode": StringNode,
@@ -27,6 +28,9 @@ NODE_CLASS_MAPPINGS = {
     "LZAppendLogToCSV": LZAppendLogToCSV,
     "LZSaveImageAndLog": LZSaveImageAndLog,
     "LZSimpleCheckpointLoader": LZSimpleCheckpointLoader,
+    "LZMergeRecipeRandom": LZMergeRecipeRandom,
+    "LZMergeRecipeManual": LZMergeRecipeManual,
+    "LZMergeRecipeRandomAdvanced": LZMergeRecipeRandomAdvanced,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -49,6 +53,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZAppendLogToCSV": "LZ Append Log to CSV",
     "LZSaveImageAndLog": "LZ Save Image & Log",
     "LZSimpleCheckpointLoader": "LZ Simple Checkpoint Loader",
+    "LZMergeRecipeRandom": "LZ Merge Recipe Random",
+    "LZMergeRecipeManual": "LZ Merge Recipe Manual",
+    "LZMergeRecipeRandomAdvanced": "LZ Merge Recipe Random Advanced",
 }
 
 WEB_DIRECTORY = "./js"
