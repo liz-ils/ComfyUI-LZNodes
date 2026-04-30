@@ -68,6 +68,36 @@ class LZPipePackXL:
     CATEGORY = "MyCustomNodes/Pipe"
 
     def pack_xl(self, **kwargs):
+        x_type = kwargs.get("x_type", "none")
+        x_type_str = kwargs.get("x_type_str")
+        if x_type_str:
+            x_type = x_type_str
+
+        y_type = kwargs.get("y_type", "none")
+        y_type_str = kwargs.get("y_type_str")
+        if y_type_str:
+            y_type = y_type_str
+
+        x_values = kwargs.get("x_values", "")
+        y_values = kwargs.get("y_values", "")
+        x_replace_key = kwargs.get("x_replace_key", "")
+        y_replace_key = kwargs.get("y_replace_key", "")
+        replace_escape = kwargs.get("replace_escape", True)
+
+        def parse_values(text):
+            if not text:
+                return []
+            lines = text.strip().split('\n')
+            return [line.strip() for line in lines if line.strip()]
+
+        kwargs["_x_type"] = x_type
+        kwargs["_x_values"] = parse_values(x_values)
+        kwargs["_y_type"] = y_type
+        kwargs["_y_values"] = parse_values(y_values)
+        kwargs["_x_replace_key"] = x_replace_key
+        kwargs["_y_replace_key"] = y_replace_key
+        kwargs["_replace_escape"] = replace_escape
+
         return (kwargs,)
 
 
