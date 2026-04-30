@@ -15,14 +15,15 @@ class LZSetNode:
             }
         }
 
-    RETURN_TYPES = ()
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("trigger",)
     FUNCTION = "set_value"
     CATEGORY = "MyCustomNodes/Utils"
     OUTPUT_NODE = True
 
     def set_value(self, name, value=None):
         SET_GET_STORE[name] = value
-        return ()
+        return (name,)
 
 
 class LZGetNode:
@@ -31,6 +32,9 @@ class LZGetNode:
         return {
             "required": {
                 "name": ("STRING", {"default": "default"}),
+            },
+            "optional": {
+                "trigger": ("STRING", {"default": ""}),
             }
         }
 
@@ -39,7 +43,7 @@ class LZGetNode:
     FUNCTION = "get_value"
     CATEGORY = "MyCustomNodes/Utils"
 
-    def get_value(self, name):
+    def get_value(self, name, trigger=None):
         if name not in SET_GET_STORE:
             raise ValueError(f"LZGetNode Error: Value '{name}' not found in store.")
         value = SET_GET_STORE[name]
