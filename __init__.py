@@ -8,6 +8,7 @@ from .py.sampling import LZKSamplerDecode
 from .py.image_io import LZSaveImageAndLog
 from .py.merge_recipe import LZMergeRecipeRandom, LZMergeRecipeManual, LZMergeRecipeRandomAdvanced
 from .py.xy_plot import LZXYPlot, LZXYPlotSampler, LZXYSampler, LZXYGridOutput
+from .py.set_get import LZSetNode, LZGetNode
 
 NODE_CLASS_MAPPINGS = {
     "StringNode": StringNode,
@@ -37,6 +38,8 @@ NODE_CLASS_MAPPINGS = {
     "LZXYPlotSampler": LZXYPlotSampler,
     "LZXYSampler": LZXYSampler,
     "LZXYGridOutput": LZXYGridOutput,
+    "LZSetNode": LZSetNode,
+    "LZGetNode": LZGetNode,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -67,6 +70,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZXYPlotSampler": "LZ XY Plot & Sampler",
     "LZXYSampler": "LZ XY Sampler",
     "LZXYGridOutput": "LZ XY Grid Output",
+    "LZSetNode": "LZ Set Node",
+    "LZGetNode": "LZ Get Node",
 }
 
 WEB_DIRECTORY = "./js"
