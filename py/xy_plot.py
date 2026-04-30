@@ -521,6 +521,22 @@ class LZXYSampler:
         base_pos_text = positive_text if positive_text else lz_pipe.get("positive_text", "")
         base_neg_text = negative_text if negative_text else lz_pipe.get("negative_text", "")
 
+        # positive_textからCONDITIONINGへの自動エンコード
+        if base_positive is None and base_pos_text != "":
+            if base_clip is None:
+                raise ValueError("LZXYSampler Error: CLIP is required to encode positive_text.")
+            tokens_pos = base_clip.tokenize(base_pos_text)
+            cond_pos, pooled_pos = base_clip.encode_from_tokens(tokens_pos, return_pooled=True)
+            base_positive = [[cond_pos, {"pooled_output": pooled_pos}]]
+
+        # negative_textからCONDITIONINGへの自動エンコード
+        if base_negative is None and base_neg_text != "":
+            if base_clip is None:
+                raise ValueError("LZXYSampler Error: CLIP is required to encode negative_text.")
+            tokens_neg = base_clip.tokenize(base_neg_text)
+            cond_neg, pooled_neg = base_clip.encode_from_tokens(tokens_neg, return_pooled=True)
+            base_negative = [[cond_neg, {"pooled_output": pooled_neg}]]
+
         if base_model is None or base_clip is None or base_vae is None:
             raise ValueError("LZXYSampler Error: Model, CLIP, and VAE are required.")
 
