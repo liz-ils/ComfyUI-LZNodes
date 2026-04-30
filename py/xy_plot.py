@@ -403,12 +403,13 @@ class LZXYSampler:
                 "x_values": ("STRING", {"multiline": True, "default": ""}),
                 "y_type": (param_options, {"default": "none"}),
                 "y_values": ("STRING", {"multiline": True, "default": ""}),
+                "x_type_str": ("STRING", {"forceInput": True}),
+                "y_type_str": ("STRING", {"forceInput": True}),
                 "x_replace_key": ("STRING", {"default": ""}),
                 "y_replace_key": ("STRING", {"default": ""}),
                 "replace_escape": ("BOOLEAN", {"default": True}),
                 "x_labels": ("STRING", {"forceInput": True}),
                 "y_labels": ("STRING", {"forceInput": True}),
-                "replace_key": ("STRING", {"forceInput": True}),
                 "model": ("MODEL",),
                 "clip": ("CLIP",),
                 "vae": ("VAE",),
@@ -428,30 +429,40 @@ class LZXYSampler:
 
     def xy_sample(self, seed, steps, cfg, sampler_name, scheduler, denoise,
                   lz_pipe=None, x_type="none", x_values="", y_type="none", y_values="",
+                  x_type_str=None, y_type_str=None,
                   y_replace_key="", x_replace_key="", replace_escape=True,
-                  x_labels=None, y_labels=None, replace_key=None,
+                  x_labels=None, y_labels=None,
                   model=None, clip=None, vae=None, positive=None, negative=None,
                   positive_text="", negative_text="", latent_image=None):
 
         if lz_pipe is None:
             lz_pipe = {}
 
-        # lz_pipeからXY情報を取得（x_type/x_valuesが未設定の場合）
-        if lz_pipe:
-            if (x_type == "none" or x_type == "") and not x_values:
+        # lz_pipeからXY情報を取得
+        # 優先度: x_type_str > x_type(direct input) > pipe
+        if x_type_str:
+            x_type = x_type_str
+        elif lz_pipe:
+            if not x_values:
                 pipe_x_type = lz_pipe.get("_x_type")
                 if pipe_x_type:
                     x_type = pipe_x_type
                 pipe_x_values = lz_pipe.get("_x_values")
                 if pipe_x_values and isinstance(pipe_x_values, list):
                     x_values = "\n".join(pipe_x_values)
-            if (y_type == "none" or y_type == "") and not y_values:
+
+        if y_type_str:
+            y_type = y_type_str
+        elif lz_pipe:
+            if not y_values:
                 pipe_y_type = lz_pipe.get("_y_type")
                 if pipe_y_type:
                     y_type = pipe_y_type
                 pipe_y_values = lz_pipe.get("_y_values")
                 if pipe_y_values and isinstance(pipe_y_values, list):
                     y_values = "\n".join(pipe_y_values)
+
+        if lz_pipe:
             if not x_replace_key:
                 pipe_x_replace_key = lz_pipe.get("_x_replace_key")
                 if pipe_x_replace_key:
