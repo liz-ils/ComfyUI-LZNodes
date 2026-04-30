@@ -81,14 +81,17 @@ class LZXYPlot:
             }
         }
 
-    RETURN_TYPES = ("LZ_PIPE", "STRING", "STRING", "STRING", "STRING", "INT")
-    RETURN_NAMES = ("lz_pipe", "x_labels", "y_labels", "y_replace_key", "x_replace_key", "total_count")
+    RETURN_TYPES = ("LZ_PIPE", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "INT")
+    RETURN_NAMES = ("lz_pipe", "x_labels", "y_labels", "y_replace_key", "x_replace_key", "x_type", "y_type", "total_count")
     FUNCTION = "process_xy"
     CATEGORY = "MyCustomNodes/XY"
 
     def process_xy(self, x_type, x_values, y_type, y_values, y_replace_key, x_replace_key, replace_escape, lz_pipe=None):
         if lz_pipe is None:
             lz_pipe = {}
+
+        original_x_type = x_type
+        original_y_type = y_type
 
         x_list = parse_values(x_values)
         y_list = parse_values(y_values)
@@ -122,7 +125,7 @@ class LZXYPlot:
         new_pipe["_x_labels"] = ",".join(x_labels)
         new_pipe["_y_labels"] = ",".join(y_labels)
 
-        return (new_pipe, ",".join(x_labels), ",".join(y_labels), y_replace_key if y_replace_key else "", x_replace_key if x_replace_key else "", total_count)
+        return (new_pipe, ",".join(x_labels), ",".join(y_labels), y_replace_key if y_replace_key else "", x_replace_key if x_replace_key else "", original_x_type, original_y_type, total_count)
 
 
 class LZXYPlotSampler:

@@ -3,7 +3,7 @@ from .py.log_csv import LZAppendLogToCSV
 from .py.prompts import DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt
 from .py.loaders import EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker
 from .py.latent import PresetEmptyLatentImage
-from .py.pipe import LZPipePack, LZPipeUnpack
+from .py.pipe import LZPipePack, LZPipePackXL, LZPipeUnpack
 from .py.sampling import LZKSamplerDecode
 from .py.image_io import LZSaveImageAndLog
 from .py.merge_recipe import LZMergeRecipeRandom, LZMergeRecipeManual, LZMergeRecipeRandomAdvanced
@@ -18,6 +18,7 @@ NODE_CLASS_MAPPINGS = {
     "PresetEmptyLatentImage": PresetEmptyLatentImage,
     "StringConcatNode": StringConcatNode,
     "LZPipePack": LZPipePack,
+    "LZPipePackXL": LZPipePackXL,
     "LZPipeUnpack": LZPipeUnpack,
     "LZKSamplerDecode": LZKSamplerDecode,
     "LZLoRAStacker": LZLoRAStacker,
@@ -47,6 +48,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "PresetEmptyLatentImage": "LZ Preset Empty Latent Image",
     "StringConcatNode": "LZ String Concat",
     "LZPipePack": "LZ Pipe Pack",
+    "LZPipePackXL": "LZ Pipe Pack XL",
     "LZPipeUnpack": "LZ Pipe Unpack",
     "LZKSamplerDecode": "LZ KSampler & Decode",
     "LZLoRAStacker": "LZ LoRA Stacker",

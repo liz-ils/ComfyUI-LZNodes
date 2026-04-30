@@ -1,6 +1,37 @@
 # pipe.py
 
+
 class LZPipePack:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {},
+            "optional": {
+                "model": ("MODEL",),
+                "clip": ("CLIP",),
+                "vae": ("VAE",),
+                "positive": ("CONDITIONING",),
+                "negative": ("CONDITIONING",),
+                "latent": ("LATENT",),
+                "positive_text": ("STRING", {"forceInput": True}),
+                "negative_text": ("STRING", {"forceInput": True}),
+                "width": ("INT", {"forceInput": True}),
+                "height": ("INT", {"forceInput": True}),
+                "ckpt_name": ("STRING", {"forceInput": True}),
+                "ckpt_hash": ("STRING", {"forceInput": True}),
+            }
+        }
+
+    RETURN_TYPES = ("LZ_PIPE",)
+    RETURN_NAMES = ("lz_pipe",)
+    FUNCTION = "pack"
+    CATEGORY = "MyCustomNodes/Pipe"
+
+    def pack(self, **kwargs):
+        return (kwargs,)
+
+
+class LZPipePackXL:
     @classmethod
     def INPUT_TYPES(s):
         param_options = ["none", "checkpoint", "lora", "sampler", "scheduler", "positive", "negative"]
@@ -31,11 +62,12 @@ class LZPipePack:
 
     RETURN_TYPES = ("LZ_PIPE",)
     RETURN_NAMES = ("lz_pipe",)
-    FUNCTION = "pack"
+    FUNCTION = "pack_xl"
     CATEGORY = "MyCustomNodes/Pipe"
 
-    def pack(self, **kwargs):
+    def pack_xl(self, **kwargs):
         return (kwargs,)
+
 
 class LZPipeUnpack:
     @classmethod
@@ -43,7 +75,7 @@ class LZPipeUnpack:
         return {
             "required": { "lz_pipe": ("LZ_PIPE",), }
         }
-    
+
     RETURN_TYPES = ("MODEL", "CLIP", "VAE", "CONDITIONING", "CONDITIONING", "LATENT", "STRING", "STRING", "INT", "INT", "STRING", "STRING")
     RETURN_NAMES = ("MODEL", "CLIP", "VAE", "positive", "negative", "LATENT", "positive_text", "negative_text", "width", "height", "ckpt_name", "ckpt_hash")
     FUNCTION = "unpack"
