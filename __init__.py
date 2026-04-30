@@ -7,7 +7,7 @@ from .py.pipe import LZPipePack, LZPipeUnpack
 from .py.sampling import LZKSamplerDecode
 from .py.image_io import LZSaveImageAndLog
 from .py.merge_recipe import LZMergeRecipeRandom, LZMergeRecipeManual, LZMergeRecipeRandomAdvanced
-from .py.xy_plot import LZXYPlot, LZXYPlotSampler, LZXYGridOutput
+from .py.xy_plot import LZXYPlot, LZXYPlotSampler, LZXYSampler, LZXYGridOutput
 
 NODE_CLASS_MAPPINGS = {
     "StringNode": StringNode,
@@ -34,6 +34,7 @@ NODE_CLASS_MAPPINGS = {
     "LZMergeRecipeRandomAdvanced": LZMergeRecipeRandomAdvanced,
     "LZXYPlot": LZXYPlot,
     "LZXYPlotSampler": LZXYPlotSampler,
+    "LZXYSampler": LZXYSampler,
     "LZXYGridOutput": LZXYGridOutput,
 }
 
@@ -62,6 +63,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZMergeRecipeRandomAdvanced": "LZ Merge Recipe Random Advanced",
     "LZXYPlot": "LZ XY Plot",
     "LZXYPlotSampler": "LZ XY Plot & Sampler",
+    "LZXYSampler": "LZ XY Sampler",
     "LZXYGridOutput": "LZ XY Grid Output",
 }
 

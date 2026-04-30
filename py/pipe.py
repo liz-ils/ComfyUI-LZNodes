@@ -3,6 +3,7 @@
 class LZPipePack:
     @classmethod
     def INPUT_TYPES(s):
+        param_options = ["none", "checkpoint", "lora", "sampler", "scheduler", "positive", "negative"]
         return {
             "required": {},
             "optional": {
@@ -18,9 +19,16 @@ class LZPipePack:
                 "height": ("INT", {"forceInput": True}),
                 "ckpt_name": ("STRING", {"forceInput": True}),
                 "ckpt_hash": ("STRING", {"forceInput": True}),
+                "x_type": (param_options, {"default": "none"}),
+                "x_values": ("STRING", {"multiline": True, "default": ""}),
+                "y_type": (param_options, {"default": "none"}),
+                "y_values": ("STRING", {"multiline": True, "default": ""}),
+                "y_replace_key": ("STRING", {"default": ""}),
+                "x_replace_key": ("STRING", {"default": ""}),
+                "replace_escape": ("BOOLEAN", {"default": True}),
             }
         }
-    
+
     RETURN_TYPES = ("LZ_PIPE",)
     RETURN_NAMES = ("lz_pipe",)
     FUNCTION = "pack"

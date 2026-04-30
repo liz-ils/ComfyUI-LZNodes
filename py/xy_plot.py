@@ -73,6 +73,7 @@ class LZXYPlot:
                 "y_type": (param_options, {"default": "none"}),
                 "y_values": ("STRING", {"multiline": True, "default": ""}),
                 "y_replace_key": ("STRING", {"default": ""}),
+                "x_replace_key": ("STRING", {"default": ""}),
                 "replace_escape": ("BOOLEAN", {"default": True}),
             },
             "optional": {
@@ -80,12 +81,12 @@ class LZXYPlot:
             }
         }
 
-    RETURN_TYPES = ("LZ_PIPE", "STRING", "STRING", "STRING", "INT")
-    RETURN_NAMES = ("lz_pipe", "x_labels", "y_labels", "replace_key", "total_count")
+    RETURN_TYPES = ("LZ_PIPE", "STRING", "STRING", "STRING", "STRING", "INT")
+    RETURN_NAMES = ("lz_pipe", "x_labels", "y_labels", "y_replace_key", "x_replace_key", "total_count")
     FUNCTION = "process_xy"
     CATEGORY = "MyCustomNodes/XY"
 
-    def process_xy(self, x_type, x_values, y_type, y_values, y_replace_key, replace_escape, lz_pipe=None):
+    def process_xy(self, x_type, x_values, y_type, y_values, y_replace_key, x_replace_key, replace_escape, lz_pipe=None):
         if lz_pipe is None:
             lz_pipe = {}
 
@@ -116,9 +117,12 @@ class LZXYPlot:
         new_pipe["_y_type"] = y_type
         new_pipe["_y_values"] = y_list
         new_pipe["_y_replace_key"] = y_replace_key
+        new_pipe["_x_replace_key"] = x_replace_key
         new_pipe["_replace_escape"] = replace_escape
+        new_pipe["_x_labels"] = ",".join(x_labels)
+        new_pipe["_y_labels"] = ",".join(y_labels)
 
-        return (new_pipe, ",".join(x_labels), ",".join(y_labels), y_replace_key if y_replace_key else "", total_count)
+        return (new_pipe, ",".join(x_labels), ",".join(y_labels), y_replace_key if y_replace_key else "", x_replace_key if x_replace_key else "", total_count)
 
 
 class LZXYPlotSampler:
@@ -135,6 +139,7 @@ class LZXYPlotSampler:
                 "y_type": (param_options, {"default": "none"}),
                 "y_values": ("STRING", {"multiline": True, "default": ""}),
                 "y_replace_key": ("STRING", {"default": ""}),
+                "x_replace_key": ("STRING", {"default": ""}),
                 "replace_escape": ("BOOLEAN", {"default": True}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
@@ -149,12 +154,12 @@ class LZXYPlotSampler:
             }
         }
 
-    RETURN_TYPES = ("IMAGE", "LZ_PIPE", "STRING", "STRING", "STRING", "INT", "INT")
-    RETURN_NAMES = ("images", "lz_pipe", "x_labels", "y_labels", "replace_key", "width", "height")
+    RETURN_TYPES = ("IMAGE", "LZ_PIPE", "STRING", "STRING", "STRING", "STRING", "INT", "INT")
+    RETURN_NAMES = ("images", "lz_pipe", "x_labels", "y_labels", "y_replace_key", "x_replace_key", "width", "height")
     FUNCTION = "xy_sample"
     CATEGORY = "MyCustomNodes/XY"
 
-    def xy_sample(self, x_type, x_values, y_type, y_values, y_replace_key, replace_escape,
+    def xy_sample(self, x_type, x_values, y_type, y_values, y_replace_key, x_replace_key, replace_escape,
                   seed, steps, cfg, sampler_name, scheduler, denoise,
                   lz_pipe=None, latent_image=None):
 
@@ -367,7 +372,324 @@ class LZXYPlotSampler:
         new_pipe["vae"] = current_vae
         new_pipe["latent"] = latent_image
 
-        return (images_tensor, new_pipe, ",".join(x_labels), ",".join(y_labels), y_replace_key if y_replace_key else "", width, height)
+        return (images_tensor, new_pipe, ",".join(x_labels), ",".join(y_labels), y_replace_key if y_replace_key else "", x_replace_key if x_replace_key else "", width, height)
+
+
+class LZXYSampler:
+    def __init__(self):
+        self.loaded_loras = {}
+
+    @classmethod
+    def INPUT_TYPES(s):
+        param_options = ["none", "checkpoint", "lora", "sampler", "scheduler", "positive", "negative"]
+        inputs = {
+            "required": {
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+                "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+                "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0, "step": 0.1}),
+                "sampler_name": (comfy.samplers.KSampler.SAMPLERS, {"default": "euler"}),
+                "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"default": "normal"}),
+                "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+            },
+            "optional": {
+                "lz_pipe": ("LZ_PIPE",),
+                "x_type": (param_options, {"default": "none"}),
+                "x_values": ("STRING", {"multiline": True, "default": ""}),
+                "y_type": (param_options, {"default": "none"}),
+                "y_values": ("STRING", {"multiline": True, "default": ""}),
+                "y_replace_key": ("STRING", {"default": ""}),
+                "x_replace_key": ("STRING", {"default": ""}),
+                "replace_escape": ("BOOLEAN", {"default": True}),
+                "x_labels": ("STRING", {"forceInput": True}),
+                "y_labels": ("STRING", {"forceInput": True}),
+                "replace_key": ("STRING", {"forceInput": True}),
+                "model": ("MODEL",),
+                "clip": ("CLIP",),
+                "vae": ("VAE",),
+                "positive": ("CONDITIONING",),
+                "negative": ("CONDITIONING",),
+                "positive_text": ("STRING", {"forceInput": True}),
+                "negative_text": ("STRING", {"forceInput": True}),
+                "latent_image": ("LATENT",),
+            }
+        }
+        return inputs
+
+    RETURN_TYPES = ("IMAGE", "LZ_PIPE", "INT", "INT")
+    RETURN_NAMES = ("images", "lz_pipe", "width", "height")
+    FUNCTION = "xy_sample"
+    CATEGORY = "MyCustomNodes/XY"
+
+    def xy_sample(self, seed, steps, cfg, sampler_name, scheduler, denoise,
+                  lz_pipe=None, x_type="none", x_values="", y_type="none", y_values="",
+                  y_replace_key="", x_replace_key="", replace_escape=True,
+                  x_labels=None, y_labels=None, replace_key=None,
+                  model=None, clip=None, vae=None, positive=None, negative=None,
+                  positive_text="", negative_text="", latent_image=None):
+
+        if lz_pipe is None:
+            lz_pipe = {}
+
+        x_list = parse_values(x_values)
+        y_list = parse_values(y_values)
+
+        has_x = x_type != "none" and len(x_list) > 0
+        has_y = y_type != "none" and len(y_list) > 0
+
+        if not has_x and not has_y:
+            raise ValueError("LZXYSampler Error: Either X or Y must have values.")
+
+        if not has_x:
+            x_list = ["idx"]
+            x_type = "none"
+        if not has_y:
+            y_list = ["idx"]
+            y_type = "none"
+
+        if x_labels is None:
+            x_labels_out = ",".join(x_list)
+        else:
+            x_labels_out = x_labels
+
+        if y_labels is None:
+            y_labels_out = ",".join(y_list)
+        else:
+            y_labels_out = y_labels
+
+        replace_key_out = y_replace_key if y_replace_key else x_replace_key
+
+        width = lz_pipe.get("width", 512)
+        height = lz_pipe.get("height", 512)
+
+        if latent_image is None:
+            latent_image = lz_pipe.get("latent")
+        if latent_image is None:
+            latent_w = width // 8
+            latent_h = height // 8
+            latent_image = {"samples": torch.zeros([1, 4, latent_h, latent_w])}
+
+        base_model = model if model is not None else lz_pipe.get("model")
+        base_clip = clip if clip is not None else lz_pipe.get("clip")
+        base_vae = vae if vae is not None else lz_pipe.get("vae")
+        base_positive = positive if positive is not None else lz_pipe.get("positive")
+        base_negative = negative if negative is not None else lz_pipe.get("negative")
+        base_pos_text = positive_text if positive_text else lz_pipe.get("positive_text", "")
+        base_neg_text = negative_text if negative_text else lz_pipe.get("negative_text", "")
+
+        if base_model is None or base_clip is None or base_vae is None:
+            raise ValueError("LZXYSampler Error: Model, CLIP, and VAE are required.")
+
+        current_model = base_model
+        current_clip = base_clip
+        current_vae = base_vae
+
+        images_list = []
+
+        for y_idx, y_val in enumerate(y_list):
+            for x_idx, x_val in enumerate(x_list):
+                model = current_model
+                clip = current_clip
+                vae = current_vae
+
+                temp_pipe = lz_pipe.copy()
+                temp_pipe["model"] = model
+                temp_pipe["clip"] = clip
+                temp_pipe["vae"] = vae
+
+                temp_positive = base_positive
+                temp_negative = base_negative
+                temp_pos_text = base_pos_text
+                temp_neg_text = base_neg_text
+                temp_sampler = sampler_name
+                temp_scheduler = scheduler
+
+                if x_type == "checkpoint":
+                    ckpt_name = x_val
+                    ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
+                    if ckpt_path is None:
+                        raise ValueError(f"LZXYSampler Error: Checkpoint not found: {ckpt_name}")
+
+                    if model is not None:
+                        del model
+                        del clip
+                        del vae
+                        gc.collect()
+
+                    out = comfy.sd.load_checkpoint_guess_config(
+                        ckpt_path,
+                        output_vae=True,
+                        output_clip=True,
+                        embedding_directory=folder_paths.get_folder_paths("embeddings")
+                    )
+                    model, clip, vae = out[:3]
+                    temp_pipe["model"] = model
+                    temp_pipe["clip"] = clip
+                    temp_pipe["vae"] = vae
+                    temp_pipe["ckpt_name"] = ckpt_name
+
+                elif x_type == "lora":
+                    parts = x_val.split(":")
+                    lora_name = parts[0]
+                    model_weight = float(parts[1]) if len(parts) > 1 else 1.0
+                    clip_weight = float(parts[2]) if len(parts) > 2 else 1.0
+
+                    if model_weight != 0 or clip_weight != 0:
+                        lora_path = folder_paths.get_full_path("loras", lora_name)
+                        if lora_path is None:
+                            raise ValueError(f"LZXYSampler Error: LoRA not found: {lora_name}")
+
+                        if lora_path in self.loaded_loras:
+                            lora = self.loaded_loras[lora_path]
+                        else:
+                            lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+                            self.loaded_loras[lora_path] = lora
+
+                        model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
+                        temp_pipe["model"] = model
+                        temp_pipe["clip"] = clip
+
+                elif x_type == "positive":
+                    if clip is None:
+                        raise ValueError("LZXYSampler Error: CLIP is required for positive prompt encoding.")
+                    replaced_text = replace_prompt_text(base_pos_text, x_replace_key, x_val, replace_escape)
+                    tokens_pos = clip.tokenize(replaced_text)
+                    cond_pos, pooled_pos = clip.encode_from_tokens(tokens_pos, return_pooled=True)
+                    temp_positive = [[cond_pos, {"pooled_output": pooled_pos}]]
+                    temp_pos_text = replaced_text
+
+                elif x_type == "negative":
+                    if clip is None:
+                        raise ValueError("LZXYSampler Error: CLIP is required for negative prompt encoding.")
+                    replaced_text = replace_prompt_text(base_neg_text, x_replace_key, x_val, replace_escape)
+                    tokens_neg = clip.tokenize(replaced_text)
+                    cond_neg, pooled_neg = clip.encode_from_tokens(tokens_neg, return_pooled=True)
+                    temp_negative = [[cond_neg, {"pooled_output": pooled_neg}]]
+                    temp_neg_text = replaced_text
+
+                elif x_type == "sampler":
+                    temp_sampler = x_val
+
+                elif x_type == "scheduler":
+                    temp_scheduler = x_val
+
+                if y_type == "checkpoint":
+                    ckpt_name = y_val
+                    ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
+                    if ckpt_path is None:
+                        raise ValueError(f"LZXYSampler Error: Checkpoint not found: {ckpt_name}")
+
+                    if model is not None:
+                        del model
+                        del clip
+                        del vae
+                        gc.collect()
+
+                    out = comfy.sd.load_checkpoint_guess_config(
+                        ckpt_path,
+                        output_vae=True,
+                        output_clip=True,
+                        embedding_directory=folder_paths.get_folder_paths("embeddings")
+                    )
+                    model, clip, vae = out[:3]
+                    temp_pipe["model"] = model
+                    temp_pipe["clip"] = clip
+                    temp_pipe["vae"] = vae
+                    temp_pipe["ckpt_name"] = ckpt_name
+
+                elif y_type == "lora":
+                    parts = y_val.split(":")
+                    lora_name = parts[0]
+                    model_weight = float(parts[1]) if len(parts) > 1 else 1.0
+                    clip_weight = float(parts[2]) if len(parts) > 2 else 1.0
+
+                    if model_weight != 0 or clip_weight != 0:
+                        lora_path = folder_paths.get_full_path("loras", lora_name)
+                        if lora_path is None:
+                            raise ValueError(f"LZXYSampler Error: LoRA not found: {lora_name}")
+
+                        if lora_path in self.loaded_loras:
+                            lora = self.loaded_loras[lora_path]
+                        else:
+                            lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+                            self.loaded_loras[lora_path] = lora
+
+                        model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
+                        temp_pipe["model"] = model
+                        temp_pipe["clip"] = clip
+
+                elif y_type == "positive":
+                    if clip is None:
+                        raise ValueError("LZXYSampler Error: CLIP is required for positive prompt encoding.")
+                    replaced_text = replace_prompt_text(base_pos_text, y_replace_key, y_val, replace_escape)
+                    tokens_pos = clip.tokenize(replaced_text)
+                    cond_pos, pooled_pos = clip.encode_from_tokens(tokens_pos, return_pooled=True)
+                    temp_positive = [[cond_pos, {"pooled_output": pooled_pos}]]
+                    temp_pos_text = replaced_text
+
+                elif y_type == "negative":
+                    if clip is None:
+                        raise ValueError("LZXYSampler Error: CLIP is required for negative prompt encoding.")
+                    replaced_text = replace_prompt_text(base_neg_text, y_replace_key, y_val, replace_escape)
+                    tokens_neg = clip.tokenize(replaced_text)
+                    cond_neg, pooled_neg = clip.encode_from_tokens(tokens_neg, return_pooled=True)
+                    temp_negative = [[cond_neg, {"pooled_output": pooled_neg}]]
+                    temp_neg_text = replaced_text
+
+                elif y_type == "sampler":
+                    temp_sampler = y_val
+
+                elif y_type == "scheduler":
+                    temp_scheduler = y_val
+
+                if temp_positive is None:
+                    temp_positive = base_positive
+                if temp_negative is None:
+                    temp_negative = base_negative
+
+                if model is None or temp_positive is None or temp_negative is None:
+                    raise ValueError("LZXYSampler Error: Missing required data (model, positive, negative).")
+
+                if vae is None:
+                    raise ValueError("LZXYSampler Error: VAE is required.")
+
+                current_seed = seed + (y_idx * len(x_list) + x_idx)
+
+                ksampler = nodes.KSampler()
+                sampled_latent = ksampler.sample(model, current_seed, steps, cfg, temp_sampler, temp_scheduler, temp_positive, temp_negative, latent_image, denoise)[0]
+
+                vae_decoder = nodes.VAEDecode()
+                image = vae_decoder.decode(vae, sampled_latent)[0]
+
+                images_list.append(image)
+
+                current_model = model
+                current_clip = clip
+                current_vae = vae
+
+        if len(images_list) == 0:
+            raise ValueError("LZXYSampler Error: No images generated.")
+
+        images_tensor = torch.cat(images_list, dim=0)
+
+        new_pipe = lz_pipe.copy()
+        new_pipe["model"] = current_model
+        new_pipe["clip"] = current_clip
+        new_pipe["vae"] = current_vae
+        new_pipe["latent"] = latent_image
+        new_pipe["positive"] = temp_positive
+        new_pipe["negative"] = temp_negative
+        new_pipe["positive_text"] = temp_pos_text
+        new_pipe["negative_text"] = temp_neg_text
+        new_pipe["sampler_name"] = temp_sampler
+        new_pipe["scheduler"] = temp_scheduler
+        new_pipe["seed"] = seed
+        new_pipe["steps"] = steps
+        new_pipe["cfg"] = cfg
+        new_pipe["_x_labels"] = x_labels_out
+        new_pipe["_y_labels"] = y_labels_out
+        new_pipe["_replace_key"] = replace_key_out
+
+        return (images_tensor, new_pipe, width, height)
 
 
 class LZXYGridOutput:
