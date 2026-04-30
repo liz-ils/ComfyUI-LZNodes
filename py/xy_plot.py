@@ -81,8 +81,8 @@ class LZXYPlot:
             }
         }
 
-    RETURN_TYPES = ("LZ_PIPE", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "INT")
-    RETURN_NAMES = ("lz_pipe", "x_labels", "y_labels", "x_replace_key", "y_replace_key", "x_type", "y_type", "total_count")
+    RETURN_TYPES = ("LZ_PIPE", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "INT")
+    RETURN_NAMES = ("lz_pipe", "x_labels", "y_labels", "x_replace_key", "y_replace_key", "x_type", "y_type", "x_values", "y_values", "total_count")
     FUNCTION = "process_xy"
     CATEGORY = "MyCustomNodes/XY"
 
@@ -125,7 +125,10 @@ class LZXYPlot:
         new_pipe["_x_labels"] = ",".join(x_labels)
         new_pipe["_y_labels"] = ",".join(y_labels)
 
-        return (new_pipe, ",".join(x_labels), ",".join(y_labels), x_replace_key if x_replace_key else "", y_replace_key if y_replace_key else "", original_x_type, original_y_type, total_count)
+        x_values_str = "\n".join(x_list)
+        y_values_str = "\n".join(y_list)
+
+        return (new_pipe, ",".join(x_labels), ",".join(y_labels), x_replace_key if x_replace_key else "", y_replace_key if y_replace_key else "", original_x_type, original_y_type, x_values_str, y_values_str, total_count)
 
 
 class LZXYPlotSampler:
@@ -432,6 +435,34 @@ class LZXYSampler:
 
         if lz_pipe is None:
             lz_pipe = {}
+
+        # lz_pipeからXY情報を取得（x_type/x_valuesが未設定の場合）
+        if lz_pipe:
+            if (x_type == "none" or x_type == "") and not x_values:
+                pipe_x_type = lz_pipe.get("_x_type")
+                if pipe_x_type:
+                    x_type = pipe_x_type
+                pipe_x_values = lz_pipe.get("_x_values")
+                if pipe_x_values and isinstance(pipe_x_values, list):
+                    x_values = "\n".join(pipe_x_values)
+            if (y_type == "none" or y_type == "") and not y_values:
+                pipe_y_type = lz_pipe.get("_y_type")
+                if pipe_y_type:
+                    y_type = pipe_y_type
+                pipe_y_values = lz_pipe.get("_y_values")
+                if pipe_y_values and isinstance(pipe_y_values, list):
+                    y_values = "\n".join(pipe_y_values)
+            if not x_replace_key:
+                pipe_x_replace_key = lz_pipe.get("_x_replace_key")
+                if pipe_x_replace_key:
+                    x_replace_key = pipe_x_replace_key
+            if not y_replace_key:
+                pipe_y_replace_key = lz_pipe.get("_y_replace_key")
+                if pipe_y_replace_key:
+                    y_replace_key = pipe_y_replace_key
+            pipe_replace_escape = lz_pipe.get("_replace_escape")
+            if pipe_replace_escape is not None:
+                replace_escape = pipe_replace_escape
 
         x_list = parse_values(x_values)
         y_list = parse_values(y_values)
