@@ -54,8 +54,8 @@ class LZPipePackXL:
                 "x_values": ("STRING", {"multiline": True, "default": ""}),
                 "y_type": (param_options, {"default": "none"}),
                 "y_values": ("STRING", {"multiline": True, "default": ""}),
-                "y_replace_key": ("STRING", {"default": ""}),
                 "x_replace_key": ("STRING", {"default": ""}),
+                "y_replace_key": ("STRING", {"default": ""}),
                 "replace_escape": ("BOOLEAN", {"default": True}),
             }
         }

@@ -72,8 +72,8 @@ class LZXYPlot:
                 "x_values": ("STRING", {"multiline": True, "default": ""}),
                 "y_type": (param_options, {"default": "none"}),
                 "y_values": ("STRING", {"multiline": True, "default": ""}),
-                "y_replace_key": ("STRING", {"default": ""}),
                 "x_replace_key": ("STRING", {"default": ""}),
+                "y_replace_key": ("STRING", {"default": ""}),
                 "replace_escape": ("BOOLEAN", {"default": True}),
             },
             "optional": {
@@ -82,7 +82,7 @@ class LZXYPlot:
         }
 
     RETURN_TYPES = ("LZ_PIPE", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "INT")
-    RETURN_NAMES = ("lz_pipe", "x_labels", "y_labels", "y_replace_key", "x_replace_key", "x_type", "y_type", "total_count")
+    RETURN_NAMES = ("lz_pipe", "x_labels", "y_labels", "x_replace_key", "y_replace_key", "x_type", "y_type", "total_count")
     FUNCTION = "process_xy"
     CATEGORY = "MyCustomNodes/XY"
 
@@ -125,7 +125,7 @@ class LZXYPlot:
         new_pipe["_x_labels"] = ",".join(x_labels)
         new_pipe["_y_labels"] = ",".join(y_labels)
 
-        return (new_pipe, ",".join(x_labels), ",".join(y_labels), y_replace_key if y_replace_key else "", x_replace_key if x_replace_key else "", original_x_type, original_y_type, total_count)
+        return (new_pipe, ",".join(x_labels), ",".join(y_labels), x_replace_key if x_replace_key else "", y_replace_key if y_replace_key else "", original_x_type, original_y_type, total_count)
 
 
 class LZXYPlotSampler:
@@ -141,8 +141,8 @@ class LZXYPlotSampler:
                 "x_values": ("STRING", {"multiline": True, "default": ""}),
                 "y_type": (param_options, {"default": "none"}),
                 "y_values": ("STRING", {"multiline": True, "default": ""}),
-                "y_replace_key": ("STRING", {"default": ""}),
                 "x_replace_key": ("STRING", {"default": ""}),
+                "y_replace_key": ("STRING", {"default": ""}),
                 "replace_escape": ("BOOLEAN", {"default": True}),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
@@ -158,11 +158,11 @@ class LZXYPlotSampler:
         }
 
     RETURN_TYPES = ("IMAGE", "LZ_PIPE", "STRING", "STRING", "STRING", "STRING", "INT", "INT")
-    RETURN_NAMES = ("images", "lz_pipe", "x_labels", "y_labels", "y_replace_key", "x_replace_key", "width", "height")
+    RETURN_NAMES = ("images", "lz_pipe", "x_labels", "y_labels", "x_replace_key", "y_replace_key", "width", "height")
     FUNCTION = "xy_sample"
     CATEGORY = "MyCustomNodes/XY"
 
-    def xy_sample(self, x_type, x_values, y_type, y_values, y_replace_key, x_replace_key, replace_escape,
+    def xy_sample(self, x_type, x_values, y_type, y_values, x_replace_key, y_replace_key, replace_escape,
                   seed, steps, cfg, sampler_name, scheduler, denoise,
                   lz_pipe=None, latent_image=None):
 
@@ -375,7 +375,7 @@ class LZXYPlotSampler:
         new_pipe["vae"] = current_vae
         new_pipe["latent"] = latent_image
 
-        return (images_tensor, new_pipe, ",".join(x_labels), ",".join(y_labels), y_replace_key if y_replace_key else "", x_replace_key if x_replace_key else "", width, height)
+        return (images_tensor, new_pipe, ",".join(x_labels), ",".join(y_labels), x_replace_key if x_replace_key else "", y_replace_key if y_replace_key else "", width, height)
 
 
 class LZXYSampler:
@@ -400,8 +400,8 @@ class LZXYSampler:
                 "x_values": ("STRING", {"multiline": True, "default": ""}),
                 "y_type": (param_options, {"default": "none"}),
                 "y_values": ("STRING", {"multiline": True, "default": ""}),
-                "y_replace_key": ("STRING", {"default": ""}),
                 "x_replace_key": ("STRING", {"default": ""}),
+                "y_replace_key": ("STRING", {"default": ""}),
                 "replace_escape": ("BOOLEAN", {"default": True}),
                 "x_labels": ("STRING", {"forceInput": True}),
                 "y_labels": ("STRING", {"forceInput": True}),
