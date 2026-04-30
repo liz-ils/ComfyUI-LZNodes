@@ -243,3 +243,57 @@ class LZPromptWeight:
         
         result = separator.join(result_parts)
         return (result,)
+
+
+class LZTagEditor:
+    @classmethod
+    def INPUT_TYPES(s):
+        inputs = {
+            "required": {
+                "input_string": ("STRING", {"multiline": False, "default": ""}),
+            },
+            "optional": {}
+        }
+        for i in range(1, 11):
+            inputs["optional"][f"tag{i}_name"] = ("STRING", {"default": ""})
+            inputs["optional"][f"tag{i}_strength"] = ("FLOAT", {"default": 1.0, "min": 0.0, "max": 100.0, "step": 0.05})
+            inputs["optional"][f"tag{i}_onoff"] = ("BOOLEAN", {"default": True})
+        return inputs
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("string",)
+    FUNCTION = "edit_tags"
+    CATEGORY = "MyCustomNodes/Text"
+
+    def edit_tags(self, input_string, **kwargs):
+        import re
+
+        parsed = {}
+        parts = [p.strip() for p in input_string.split(",")] if input_string.strip() else []
+        for part in parts:
+            if not part:
+                continue
+            match = re.match(r'^\((.+):([\d.]+)\)$', part.strip())
+            if match:
+                parsed[match.group(1).strip()] = float(match.group(2))
+            else:
+                parsed[part.strip()] = 1.0
+
+        tags = []
+        for i in range(1, 11):
+            tag_name = kwargs.get(f"tag{i}_name", "").strip()
+            tag_strength = kwargs.get(f"tag{i}_strength", 1.0)
+            tag_on = kwargs.get(f"tag{i}_onoff", True)
+
+            if tag_name:
+                if not tag_on:
+                    continue
+                if tag_strength != 1.0:
+                    tags.append(f"({tag_name}:{tag_strength})")
+                else:
+                    tags.append(tag_name)
+            else:
+                break
+
+        result = ",".join(tags)
+        return (result,)

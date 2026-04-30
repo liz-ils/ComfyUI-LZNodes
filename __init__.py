@@ -1,4 +1,4 @@
-from .py.text_utils import StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptWeight
+from .py.text_utils import StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptWeight, LZTagEditor
 from .py.log_csv import LZAppendLogToCSV
 from .py.prompts import DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt
 from .py.loaders import EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker
@@ -8,7 +8,6 @@ from .py.sampling import LZKSamplerDecode
 from .py.image_io import LZSaveImageAndLog
 from .py.merge_recipe import LZMergeRecipeRandom, LZMergeRecipeManual, LZMergeRecipeRandomAdvanced
 from .py.xy_plot import LZXYPlot, LZXYPlotSampler, LZXYSampler, LZXYGridOutput
-from .py.set_get import LZSetNode, LZGetNode
 
 NODE_CLASS_MAPPINGS = {
     "StringNode": StringNode,
@@ -28,6 +27,7 @@ NODE_CLASS_MAPPINGS = {
     "LZStringSelect": LZStringSelect,
     "LZSaveStringToCSV": LZSaveStringToCSV,
     "LZPromptWeight": LZPromptWeight,
+    "LZTagEditor": LZTagEditor,
     "LZAppendLogToCSV": LZAppendLogToCSV,
     "LZSaveImageAndLog": LZSaveImageAndLog,
     "LZSimpleCheckpointLoader": LZSimpleCheckpointLoader,
@@ -38,8 +38,6 @@ NODE_CLASS_MAPPINGS = {
     "LZXYPlotSampler": LZXYPlotSampler,
     "LZXYSampler": LZXYSampler,
     "LZXYGridOutput": LZXYGridOutput,
-    "LZSetNode": LZSetNode,
-    "LZGetNode": LZGetNode,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -60,6 +58,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZStringSelect": "LZ String Select",
     "LZSaveStringToCSV": "LZ Save String to CSV",
     "LZPromptWeight": "LZ Prompt Weight",
+    "LZTagEditor": "LZ Tag Editor",
     "LZAppendLogToCSV": "LZ Append Log to CSV",
     "LZSaveImageAndLog": "LZ Save Image & Log",
     "LZSimpleCheckpointLoader": "LZ Simple Checkpoint Loader",
@@ -70,8 +69,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZXYPlotSampler": "LZ XY Plot & Sampler",
     "LZXYSampler": "LZ XY Sampler",
     "LZXYGridOutput": "LZ XY Grid Output",
-    "LZSetNode": "LZ Set Node",
-    "LZGetNode": "LZ Get Node",
 }
 
 WEB_DIRECTORY = "./js"
