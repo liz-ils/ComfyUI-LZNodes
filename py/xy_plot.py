@@ -422,8 +422,8 @@ class LZXYSampler:
         }
         return inputs
 
-    RETURN_TYPES = ("IMAGE", "LZ_PIPE", "INT", "INT")
-    RETURN_NAMES = ("images", "lz_pipe", "width", "height")
+    RETURN_TYPES = ("IMAGE", "LZ_PIPE", "INT", "INT", "STRING", "STRING")
+    RETURN_NAMES = ("images", "lz_pipe", "width", "height", "x_labels", "y_labels")
     FUNCTION = "xy_sample"
     CATEGORY = "MyCustomNodes/XY"
 
@@ -750,7 +750,7 @@ class LZXYSampler:
         new_pipe["_y_labels"] = y_labels_out
         new_pipe["_replace_key"] = replace_key_out
 
-        return (images_tensor, new_pipe, width, height)
+        return (images_tensor, new_pipe, width, height, x_labels_out, y_labels_out)
 
 
 class LZXYGridOutput:
@@ -759,12 +759,12 @@ class LZXYGridOutput:
         return {
             "required": {
                 "images": ("IMAGE",),
-                "x_axis_labels": ("STRING", {"multiline": True, "default": ""}),
-                "y_axis_labels": ("STRING", {"multiline": True, "default": ""}),
-                "columns": ("INT", {"default": 1, "min": 1, "max": 100}),
+                "x_axis_labels": ("STRING", {"multiline": True, "default": "", "forceInput": True}),
+                "y_axis_labels": ("STRING", {"multiline": True, "default": "", "forceInput": True}),
+                "columns": ("INT", {"default": 0, "min": 0, "max": 100}),
                 "label_font_size": ("INT", {"default": 16, "min": 8, "max": 72}),
                 "add_border": ("BOOLEAN", {"default": True}),
-            }
+            },
         }
 
     RETURN_TYPES = ("IMAGE", "STRING")
@@ -778,17 +778,30 @@ class LZXYGridOutput:
         y_labels = parse_values(y_axis_labels)
 
         num_images = images.shape[0]
+
+        if columns <= 0:
+            if x_labels:
+                columns = len(x_labels)
+            else:
+                columns = num_images
+
         rows = (num_images + columns - 1) // columns
         cols = min(columns, num_images)
 
-        if len(y_labels) == 1 and y_labels[0] == "idx":
-            y_labels = [str(i) for i in range(num_images)]
-            rows = num_images
-            cols = 1
+        if not x_labels and not y_labels:
+            x_labels = [f"{i}" for i in range(cols)]
+            y_labels = ["idx"]
 
-        if len(x_labels) == 1 and x_labels[0] == "idx":
+        if len(y_labels) <= 1 and (not y_labels or (y_labels[0] == "idx")):
+            y_labels = [f"{i}" for i in range(rows)]
+            if not y_labels:
+                rows = num_images
+                cols = 1
+                y_labels = [str(i) for i in range(num_images)]
+
+        if len(x_labels) <= 1 and (not x_labels or (x_labels[0] == "idx")):
             if num_images > 1:
-                x_labels = [f"idx{i}" for i in range(num_images)]
+                x_labels = [f"{i}" for i in range(cols)]
                 cols = num_images
                 rows = 1
 
@@ -867,7 +880,7 @@ class LZXYGridOutput:
         result_img = torch.from_numpy(np.array(grid_img).astype(np.float32) / 255.0)
         if result_img.shape[2] == 4:
             result_img = result_img[:, :, :3]
-        result_img = result_img.permute(2, 0, 1).unsqueeze(0)
+        result_img = result_img.unsqueeze(0)
 
         param_text = "\n".join(param_text_lines)
 
