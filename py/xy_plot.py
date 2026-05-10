@@ -189,15 +189,28 @@ class LZXYPlotSampler:
             y_type = "none"
 
         images_list = []
-        width = lz_pipe.get("width", 512)
-        height = lz_pipe.get("height", 512)
+
+        # 幅高さの取得: latent_image > lz_pipe > 未定義(エラー)
+        width = 0
+        height = 0
+        if latent_image is not None:
+            samples = latent_image["samples"]
+            latent_h = samples.shape[2]
+            latent_w = samples.shape[3]
+            width = latent_w * 8
+            height = latent_h * 8
+        else:
+            width = lz_pipe.get("width", 0)
+            height = lz_pipe.get("height", 0)
 
         if latent_image is None:
             latent_image = lz_pipe.get("latent")
         if latent_image is None:
+            if width <= 0 or height <= 0:
+                raise ValueError("LZXYPlotSampler Error: latent_image or valid width/height required.")
             latent_w = width // 8
             latent_h = height // 8
-            latent_image = {"samples": torch.zeros([1, 4, latent_h, latent_w])}
+            latent_image = {"samples": torch.randn([1, 4, latent_h, latent_w])}
 
         base_model = lz_pipe.get("model")
         base_clip = lz_pipe.get("clip")
@@ -216,10 +229,6 @@ class LZXYPlotSampler:
                 model = current_model
                 clip = current_clip
                 vae = current_vae
-
-                pipe_model = lz_pipe.get("model")
-                pipe_clip = lz_pipe.get("clip")
-                pipe_vae = lz_pipe.get("vae")
 
                 if x_type == "checkpoint":
                     ckpt_name = x_val
@@ -439,7 +448,6 @@ class LZXYSampler:
             lz_pipe = {}
 
         # lz_pipeからXY情報を取得
-        # 優先度: x_type_str > x_type(direct input) > pipe
         if x_type_str:
             x_type = x_type_str
         elif lz_pipe:
@@ -503,15 +511,27 @@ class LZXYSampler:
 
         replace_key_out = y_replace_key if y_replace_key else x_replace_key
 
-        width = lz_pipe.get("width", 512)
-        height = lz_pipe.get("height", 512)
+        # 幅高さの取得: latent_image > lz_pipe > 未定義(エラー)
+        width = 0
+        height = 0
+        if latent_image is not None:
+            samples = latent_image["samples"]
+            latent_h = samples.shape[2]
+            latent_w = samples.shape[3]
+            width = latent_w * 8
+            height = latent_h * 8
+        else:
+            width = lz_pipe.get("width", 0)
+            height = lz_pipe.get("height", 0)
 
         if latent_image is None:
             latent_image = lz_pipe.get("latent")
         if latent_image is None:
+            if width <= 0 or height <= 0:
+                raise ValueError("LZXYSampler Error: latent_image or valid width/height required.")
             latent_w = width // 8
             latent_h = height // 8
-            latent_image = {"samples": torch.zeros([1, 4, latent_h, latent_w])}
+            latent_image = {"samples": torch.randn([1, 4, latent_h, latent_w])}
 
         base_model = model if model is not None else lz_pipe.get("model")
         base_clip = clip if clip is not None else lz_pipe.get("clip")
