@@ -9,6 +9,9 @@ from .py.image_io import LZSaveImageAndLog
 from .py.merge_recipe import LZMergeRecipeRandom, LZMergeRecipeManual, LZMergeRecipeRandomAdvanced
 from .py.xy_plot import LZXYPlot, LZXYPlotSampler, LZXYSampler, LZXYGridOutput
 from .py.dynamic_prompt import LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString
+from .py.pipe_info import LZPipeInfo
+from .py.log_reader import LZLogReader
+from .py.pipe_merge import LZPipeMerge
 
 NODE_CLASS_MAPPINGS = {
     "StringNode": StringNode,
@@ -42,6 +45,9 @@ NODE_CLASS_MAPPINGS = {
     "LZPromptReplaceSingle": LZPromptReplaceSingle,
     "LZPromptReplaceMulti": LZPromptReplaceMulti,
     "LZPromptReplaceString": LZPromptReplaceString,
+    "LZPipeInfo": LZPipeInfo,
+    "LZLogReader": LZLogReader,
+    "LZPipeMerge": LZPipeMerge,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -76,6 +82,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZPromptReplaceSingle": "LZ Prompt Replace Single",
     "LZPromptReplaceMulti": "LZ Prompt Replace Multi",
     "LZPromptReplaceString": "LZ Prompt Replace String",
+    "LZPipeInfo": "LZ Pipe Info",
+    "LZLogReader": "LZ Log Reader",
+    "LZPipeMerge": "LZ Pipe Merge",
 }
 
 WEB_DIRECTORY = "./js"
