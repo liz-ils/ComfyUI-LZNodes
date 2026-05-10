@@ -12,6 +12,7 @@ from .py.dynamic_prompt import LZPromptReplaceSingle, LZPromptReplaceMulti, LZPr
 from .py.pipe_info import LZPipeInfo
 from .py.log_reader import LZLogReader
 from .py.pipe_merge import LZPipeMerge
+from .py.batch_save import LZBatchSaveWithLabels
 
 NODE_CLASS_MAPPINGS = {
     "StringNode": StringNode,
@@ -48,6 +49,7 @@ NODE_CLASS_MAPPINGS = {
     "LZPipeInfo": LZPipeInfo,
     "LZLogReader": LZLogReader,
     "LZPipeMerge": LZPipeMerge,
+    "LZBatchSaveWithLabels": LZBatchSaveWithLabels,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -85,6 +87,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZPipeInfo": "LZ Pipe Info",
     "LZLogReader": "LZ Log Reader",
     "LZPipeMerge": "LZ Pipe Merge",
+    "LZBatchSaveWithLabels": "LZ Batch Save With Labels",
 }
 
 WEB_DIRECTORY = "./js"

@@ -1,13 +1,13 @@
 # pipe_info.py
 
+
 class LZPipeInfo:
     @classmethod
     def INPUT_TYPES(s):
         return {
-            "required": {
-                "text": ("STRING", {"multiline": True, "default": "", "forceInput": True}),
-            },
+            "required": {},
             "optional": {
+                "text": ("STRING", {"multiline": True, "default": "", "forceInput": True}),
                 "lz_pipe": ("LZ_PIPE",),
             }
         }
@@ -18,13 +18,13 @@ class LZPipeInfo:
     OUTPUT_NODE = True
     CATEGORY = "MyCustomNodes/Pipe"
 
-    def pipe_info(self, text, lz_pipe=None):
+    def pipe_info(self, text=None, lz_pipe=None):
         lines = []
-        
-        if text and text.strip():
+
+        if text is not None and text.strip():
             lines.append(f"=== {text.strip()} ===")
             lines.append("")
-        
+
         if lz_pipe is not None and isinstance(lz_pipe, dict):
             for key, value in sorted(lz_pipe.items()):
                 if key.startswith("_"):
@@ -46,7 +46,7 @@ class LZPipeInfo:
                     lines.append(f"{key}: {val_str}")
         else:
             lines.append("No lz_pipe connected or empty.")
-        
+
         info_text = "\n".join(lines)
-        
+
         return (lz_pipe, info_text)
