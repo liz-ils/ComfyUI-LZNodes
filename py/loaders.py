@@ -57,12 +57,10 @@ class EZCheckpointLoader:
         model, clip, vae = out[:3]
         
         tokens_pos = clip.tokenize(positive)
-        cond_pos, pooled_pos = clip.encode_from_tokens(tokens_pos, return_pooled=True)
-        positive_cond = [[cond_pos, {"pooled_output": pooled_pos}]]
+        positive_cond = clip.encode_from_tokens_scheduled(tokens_pos)
         
         tokens_neg = clip.tokenize(negative)
-        cond_neg, pooled_neg = clip.encode_from_tokens(tokens_neg, return_pooled=True)
-        negative_cond = [[cond_neg, {"pooled_output": pooled_neg}]]
+        negative_cond = clip.encode_from_tokens_scheduled(tokens_neg)
         
         lz_pipe = {
             "model": model,

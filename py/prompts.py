@@ -45,8 +45,7 @@ class AdvancedPositivePrompt:
         
         # 4. 結合した文字列をCLIPでエンコードする
         tokens = clip.tokenize(final_prompt)
-        cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
-        conditioning = [[cond, {"pooled_output": pooled}]]
+        conditioning = clip.encode_from_tokens_scheduled(tokens)
         
         # CONDITIONINGと、確認用の文字列そのものを出力
         return (conditioning, final_prompt)
@@ -88,8 +87,7 @@ class AdvancedNegativePrompt:
         
         # 4. 結合した文字列をCLIPでエンコードする
         tokens = clip.tokenize(final_negative)
-        cond, pooled = clip.encode_from_tokens(tokens, return_pooled=True)
-        conditioning = [[cond, {"pooled_output": pooled}]]
+        conditioning = clip.encode_from_tokens_scheduled(tokens)
         
         # CONDITIONINGと、確認用の文字列そのものを出力
         return (conditioning, final_negative)
@@ -114,12 +112,10 @@ class DualCLIPTextEncode:
     def encode(self, clip, positive, negative):
         # --- ポジティブのエンコード処理 ---
         tokens_pos = clip.tokenize(positive)
-        cond_pos, pooled_pos = clip.encode_from_tokens(tokens_pos, return_pooled=True)
-        positive_cond = [[cond_pos, {"pooled_output": pooled_pos}]]
+        positive_cond = clip.encode_from_tokens_scheduled(tokens_pos)
         
         # --- ネガティブのエンコード処理 ---
         tokens_neg = clip.tokenize(negative)
-        cond_neg, pooled_neg = clip.encode_from_tokens(tokens_neg, return_pooled=True)
-        negative_cond = [[cond_neg, {"pooled_output": pooled_neg}]]
+        negative_cond = clip.encode_from_tokens_scheduled(tokens_neg)
         
         return (positive_cond, negative_cond)

@@ -53,15 +53,13 @@ class LZKSamplerDecode:
             if clip is None:
                 raise ValueError("LZ KSampler Error: 'positive' (CONDITIONING) is missing, and 'clip' is required to encode 'positive_text'.")
             tokens_pos = clip.tokenize(pos_text)
-            cond_pos, pooled_pos = clip.encode_from_tokens(tokens_pos, return_pooled=True)
-            positive = [[cond_pos, {"pooled_output": pooled_pos}]]
+            positive = clip.encode_from_tokens_scheduled(tokens_pos)
 
         if negative is None and neg_text != "":
             if clip is None:
                 raise ValueError("LZ KSampler Error: 'negative' (CONDITIONING) is missing, and 'clip' is required to encode 'negative_text'.")
             tokens_neg = clip.tokenize(neg_text)
-            cond_neg, pooled_neg = clip.encode_from_tokens(tokens_neg, return_pooled=True)
-            negative = [[cond_neg, {"pooled_output": pooled_neg}]]
+            negative = clip.encode_from_tokens_scheduled(tokens_neg)
 
         # 実行に必要なデータが揃っているか最終チェック
         if None in (model, positive, negative, latent_image, vae):

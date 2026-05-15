@@ -325,8 +325,7 @@ class LZXYPlotSampler:
                         raise ValueError("LZXYPlotSampler Error: CLIP is required for positive prompt encoding.")
                     replaced_text = replace_prompt_text(base_pos_text, y_replace_key, y_val, replace_escape)
                     tokens_pos = clip.tokenize(replaced_text)
-                    cond_pos, pooled_pos = clip.encode_from_tokens(tokens_pos, return_pooled=True)
-                    positive = [[cond_pos, {"pooled_output": pooled_pos}]]
+                    positive = clip.encode_from_tokens_scheduled(tokens_pos)
                     lz_pipe["positive_text"] = replaced_text
 
                 elif y_type == "negative":
@@ -334,8 +333,7 @@ class LZXYPlotSampler:
                         raise ValueError("LZXYPlotSampler Error: CLIP is required for negative prompt encoding.")
                     replaced_text = replace_prompt_text(base_neg_text, y_replace_key, y_val, replace_escape)
                     tokens_neg = clip.tokenize(replaced_text)
-                    cond_neg, pooled_neg = clip.encode_from_tokens(tokens_neg, return_pooled=True)
-                    negative = [[cond_neg, {"pooled_output": pooled_neg}]]
+                    negative = clip.encode_from_tokens_scheduled(tokens_neg)
                     lz_pipe["negative_text"] = replaced_text
 
                 elif y_type == "sampler":
@@ -546,16 +544,14 @@ class LZXYSampler:
             if base_clip is None:
                 raise ValueError("LZXYSampler Error: CLIP is required to encode positive_text.")
             tokens_pos = base_clip.tokenize(base_pos_text)
-            cond_pos, pooled_pos = base_clip.encode_from_tokens(tokens_pos, return_pooled=True)
-            base_positive = [[cond_pos, {"pooled_output": pooled_pos}]]
+            base_positive = base_clip.encode_from_tokens_scheduled(tokens_pos)
 
         # negative_textからCONDITIONINGへの自動エンコード
         if base_negative is None and base_neg_text != "":
             if base_clip is None:
                 raise ValueError("LZXYSampler Error: CLIP is required to encode negative_text.")
             tokens_neg = base_clip.tokenize(base_neg_text)
-            cond_neg, pooled_neg = base_clip.encode_from_tokens(tokens_neg, return_pooled=True)
-            base_negative = [[cond_neg, {"pooled_output": pooled_neg}]]
+            base_negative = base_clip.encode_from_tokens_scheduled(tokens_neg)
 
         if base_model is None or base_clip is None or base_vae is None:
             raise ValueError("LZXYSampler Error: Model, CLIP, and VAE are required.")
@@ -634,8 +630,7 @@ class LZXYSampler:
                         raise ValueError("LZXYSampler Error: CLIP is required for positive prompt encoding.")
                     replaced_text = replace_prompt_text(base_pos_text, x_replace_key, x_val, replace_escape)
                     tokens_pos = clip.tokenize(replaced_text)
-                    cond_pos, pooled_pos = clip.encode_from_tokens(tokens_pos, return_pooled=True)
-                    temp_positive = [[cond_pos, {"pooled_output": pooled_pos}]]
+                    temp_positive = clip.encode_from_tokens_scheduled(tokens_pos)
                     temp_pos_text = replaced_text
 
                 elif x_type == "negative":
@@ -643,8 +638,7 @@ class LZXYSampler:
                         raise ValueError("LZXYSampler Error: CLIP is required for negative prompt encoding.")
                     replaced_text = replace_prompt_text(base_neg_text, x_replace_key, x_val, replace_escape)
                     tokens_neg = clip.tokenize(replaced_text)
-                    cond_neg, pooled_neg = clip.encode_from_tokens(tokens_neg, return_pooled=True)
-                    temp_negative = [[cond_neg, {"pooled_output": pooled_neg}]]
+                    temp_negative = clip.encode_from_tokens_scheduled(tokens_neg)
                     temp_neg_text = replaced_text
 
                 elif x_type == "sampler":
@@ -703,8 +697,7 @@ class LZXYSampler:
                         raise ValueError("LZXYSampler Error: CLIP is required for positive prompt encoding.")
                     replaced_text = replace_prompt_text(base_pos_text, y_replace_key, y_val, replace_escape)
                     tokens_pos = clip.tokenize(replaced_text)
-                    cond_pos, pooled_pos = clip.encode_from_tokens(tokens_pos, return_pooled=True)
-                    temp_positive = [[cond_pos, {"pooled_output": pooled_pos}]]
+                    temp_positive = clip.encode_from_tokens_scheduled(tokens_pos)
                     temp_pos_text = replaced_text
 
                 elif y_type == "negative":
@@ -712,8 +705,7 @@ class LZXYSampler:
                         raise ValueError("LZXYSampler Error: CLIP is required for negative prompt encoding.")
                     replaced_text = replace_prompt_text(base_neg_text, y_replace_key, y_val, replace_escape)
                     tokens_neg = clip.tokenize(replaced_text)
-                    cond_neg, pooled_neg = clip.encode_from_tokens(tokens_neg, return_pooled=True)
-                    temp_negative = [[cond_neg, {"pooled_output": pooled_neg}]]
+                    temp_negative = clip.encode_from_tokens_scheduled(tokens_neg)
                     temp_neg_text = replaced_text
 
                 elif y_type == "sampler":
