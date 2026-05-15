@@ -50,7 +50,7 @@ class LZAppendLogToCSV:
         negative_prompt = lz_pipe.get("negative_text", kwargs.get("negative_prompt", ""))
         width = lz_pipe.get("width", kwargs.get("width", 512))
         height = lz_pipe.get("height", kwargs.get("height", 512))
-        checkpoint_name = lz_pipe.get("checkpoint_name", kwargs.get("checkpoint_name", ""))
+        checkpoint_name = lz_pipe.get("ckpt_name", kwargs.get("checkpoint_name", ""))
         
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         

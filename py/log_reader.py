@@ -116,7 +116,7 @@ class LZLogReader:
                             break
                     negative_lines.append(lines[i])
                     i += 1
-                    if i < len(lines) and lines[i].startswith("Date:") or lines[i].startswith("Model:"):
+                    if i < len(lines) and (lines[i].startswith("Date:") or lines[i].startswith("Model:")):
                         break
                 current_block["negative"] = "\n".join(negative_lines).strip()
                 continue

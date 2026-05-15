@@ -215,14 +215,19 @@ class LZPromptWeight:
     def process(self, prompt, default_weight, separator):
         if not prompt or not prompt.strip():
             return ("",)
-        
+
         parts = [p.strip() for p in prompt.split(",")]
         result_parts = []
-        
+
         for part in parts:
             if not part:
                 continue
-            
+
+            # 既に (tag:weight) 形式で囲まれている場合はそのまま
+            if part.startswith("(") and part.endswith(")") and ":" in part:
+                result_parts.append(part)
+                continue
+
             if ":" in part:
                 tag, weight_str = part.rsplit(":", 1)
                 tag = tag.strip()
@@ -233,14 +238,14 @@ class LZPromptWeight:
             else:
                 tag = part.strip()
                 weight = default_weight
-            
+
             if weight == 1.0:
                 result_parts.append(tag)
             elif weight == int(weight):
                 result_parts.append(f"({tag}:{int(weight)})")
             else:
                 result_parts.append(f"({tag}:{weight})")
-        
+
         result = separator.join(result_parts)
         return (result,)
 

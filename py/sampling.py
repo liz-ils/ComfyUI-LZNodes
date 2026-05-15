@@ -14,6 +14,7 @@ class LZKSamplerDecode:
                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS, ),
                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS, ),
                 "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "model_preset": (["Auto/SDXL", "Anima"], {"default": "Auto/SDXL"}),
             },
             "optional": {
                 "lz_pipe": ("LZ_PIPE",),
@@ -33,7 +34,7 @@ class LZKSamplerDecode:
     FUNCTION = "sample_and_decode"
     CATEGORY = "MyCustomNodes/Sampling"
 
-    def sample_and_decode(self, seed, steps, cfg, sampler_name, scheduler, denoise, **kwargs):
+    def sample_and_decode(self, seed, steps, cfg, sampler_name, scheduler, denoise, model_preset, **kwargs):
         lz_pipe = kwargs.get("lz_pipe", {})
 
         # 各種データを取得（個別優先、なければパイプから）
