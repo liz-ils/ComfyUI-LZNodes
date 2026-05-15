@@ -56,10 +56,10 @@ class LZAnimaLoader:
         
         # モデル読み込み
         model_loader = nodes.UNETLoader()
-        model = model_loader.load_unet(diffusion_model)[0]
+        model = model_loader.load_unet(diffusion_model, "default")[0]
         
         clip_loader = nodes.CLIPLoader()
-        clip = clip_loader.load_clip(text_encoder, type="default")[0]
+        clip = clip_loader.load_clip(text_encoder, "default")[0]
         
         vae_loader = nodes.VAELoader()
         vae_obj = vae_loader.load_vae(vae)[0]
