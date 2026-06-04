@@ -1,4 +1,4 @@
-﻿# prompt.py
+# prompt.py
 
 class AdvancedPositivePrompt:
     @classmethod
@@ -97,25 +97,53 @@ class DualCLIPTextEncode:
     def INPUT_TYPES(s):
         return {
             "required": {
-                "clip": ("CLIP", ), # CLIP入力ピン
+                "clip": ("CLIP", ),
                 "positive": ("STRING", {"multiline": True, "default": "positive prompt"}),
                 "negative": ("STRING", {"multiline": True, "default": "negative prompt"}),
+            },
+            "optional": {
+                "positive_cond": ("CONDITIONING",),
+                "negative_cond": ("CONDITIONING",),
             }
         }
-        
-    # CONDITIONINGを2つ（ポジティブ用、ネガティブ用）出力する
-    RETURN_TYPES = ("CONDITIONING", "CONDITIONING")
-    RETURN_NAMES = ("positive", "negative")
+
+    RETURN_TYPES = ("CONDITIONING", "CONDITIONING", "STRING", "STRING")
+    RETURN_NAMES = ("positive", "negative", "positive_text", "negative_text")
     FUNCTION = "encode"
     CATEGORY = "MyCustomNodes/Conditioning"
 
-    def encode(self, clip, positive, negative):
-        # --- ポジティブのエンコード処理 ---
-        tokens_pos = clip.tokenize(positive)
-        positive_cond = clip.encode_from_tokens_scheduled(tokens_pos)
-        
-        # --- ネガティブのエンコード処理 ---
-        tokens_neg = clip.tokenize(negative)
-        negative_cond = clip.encode_from_tokens_scheduled(tokens_neg)
-        
-        return (positive_cond, negative_cond)
+    def encode(self, clip, positive, negative, positive_cond=None, negative_cond=None):
+        if positive_cond is not None:
+            pos_out = positive_cond
+        else:
+            tokens_pos = clip.tokenize(positive)
+            pos_out = clip.encode_from_tokens_scheduled(tokens_pos)
+
+        if negative_cond is not None:
+            neg_out = negative_cond
+        else:
+            tokens_neg = clip.tokenize(negative)
+            neg_out = clip.encode_from_tokens_scheduled(tokens_neg)
+
+        return (pos_out, neg_out, positive, negative)
+
+
+class LZCLIPTextEncode:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "clip": ("CLIP",),
+                "text": ("STRING", {"multiline": True, "default": ""}),
+            }
+        }
+
+    RETURN_TYPES = ("CONDITIONING", "STRING")
+    RETURN_NAMES = ("conditioning", "text")
+    FUNCTION = "encode"
+    CATEGORY = "MyCustomNodes/Conditioning"
+
+    def encode(self, clip, text):
+        tokens = clip.tokenize(text)
+        cond = clip.encode_from_tokens_scheduled(tokens)
+        return (cond, text)

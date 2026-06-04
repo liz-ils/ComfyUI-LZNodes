@@ -1,4 +1,4 @@
-﻿# loaders.py
+# loaders.py
 
 import folder_paths
 import comfy.sd
@@ -115,6 +115,42 @@ class LZSimpleCheckpointLoader:
         return (model, clip, vae, lz_pipe, ckpt_name, ckpt_hash)
 
 
+class LZLoRALoaderModelOnly:
+    def __init__(self):
+        self.loaded_loras = {}
+
+    @classmethod
+    def INPUT_TYPES(s):
+        loras = ["None"] + (folder_paths.get_filename_list("loras") or [])
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "lora_name": (loras,),
+                "strength_model": ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01}),
+            }
+        }
+
+    RETURN_TYPES = ("MODEL", "STRING", "STRING")
+    RETURN_NAMES = ("MODEL", "lora_name", "lora_strength")
+    FUNCTION = "load_lora"
+    CATEGORY = "MyCustomNodes/Loaders"
+
+    def load_lora(self, model, lora_name, strength_model):
+        if lora_name == "None" or strength_model == 0:
+            return (model, "None", "0.0")
+
+        lora_path = folder_paths.get_full_path("loras", lora_name)
+        if lora_path is not None:
+            if lora_path in self.loaded_loras:
+                lora = self.loaded_loras[lora_path]
+            else:
+                lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+                self.loaded_loras[lora_path] = lora
+            model, _ = comfy.sd.load_lora_for_models(model, None, lora, strength_model, 0)
+
+        return (model, lora_name, str(strength_model))
+
+
 class LZLoRAStacker:
     def __init__(self):
         self.loaded_loras = {}
@@ -155,6 +191,7 @@ class LZLoRAStacker:
         if model is None or clip is None:
             raise ValueError("LZ LoRA Stacker Error: MODEL and CLIP must be connected directly or provided via lz_pipe.")
 
+        used_loras = []
         for i in range(1, 11):
             lora_name = kwargs.get(f"lora_{i}", "None")
             if lora_name != "None":
@@ -164,6 +201,8 @@ class LZLoRAStacker:
                 if model_weight == 0 and clip_weight == 0:
                     continue
                 
+                used_loras.append((lora_name, model_weight))
+
                 lora_path = folder_paths.get_full_path("loras", lora_name)
                 if lora_path is not None:
                     lora = None
@@ -179,5 +218,9 @@ class LZLoRAStacker:
         new_pipe = lz_pipe.copy() if lz_pipe else {}
         new_pipe["model"] = model
         new_pipe["clip"] = clip
+
+        if used_loras:
+            new_pipe["lora_name"] = ", ".join([n for n, _ in used_loras])
+            new_pipe["lora_strength"] = ", ".join([str(m) for _, m in used_loras])
         
         return (model, clip, new_pipe)

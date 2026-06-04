@@ -1,7 +1,7 @@
 from .py.text_utils import StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptWeight, LZTagEditor
 from .py.log_csv import LZAppendLogToCSV
-from .py.prompts import DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt
-from .py.loaders import EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker
+from .py.prompts import DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZCLIPTextEncode
+from .py.loaders import EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZLoRALoaderModelOnly
 from .py.anima_loader import LZAnimaLoader
 from .py.latent import PresetEmptyLatentImage
 from .py.pipe import LZPipePack, LZPipePackXL, LZPipeUnpack
@@ -28,6 +28,8 @@ NODE_CLASS_MAPPINGS = {
     "LZPipeUnpack": LZPipeUnpack,
     "LZKSamplerDecode": LZKSamplerDecode,
     "LZLoRAStacker": LZLoRAStacker,
+    "LZCLIPTextEncode": LZCLIPTextEncode,
+    "LZLoRALoaderModelOnly": LZLoRALoaderModelOnly,
     "LZTextPreview": LZTextPreview,
     "LZStringSanitize": LZStringSanitize,
     "LZStringSelect": LZStringSelect,
@@ -67,6 +69,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZPipeUnpack": "LZ Pipe Unpack",
     "LZKSamplerDecode": "LZ KSampler & Decode",
     "LZLoRAStacker": "LZ LoRA Stacker",
+    "LZCLIPTextEncode": "LZ CLIP Text Encode",
+    "LZLoRALoaderModelOnly": "LZ LoRA Loader (Model Only)",
     "LZTextPreview": "LZ Text Preview",
     "LZStringSanitize": "LZ String Sanitize",
     "LZStringSelect": "LZ String Select",

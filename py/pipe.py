@@ -19,6 +19,8 @@ class LZPipePack:
                 "height": ("INT", {"forceInput": True}),
                 "ckpt_name": ("STRING", {"forceInput": True}),
                 "ckpt_hash": ("STRING", {"forceInput": True}),
+                "lora_name": ("STRING", {"forceInput": True}),
+                "lora_strength": ("STRING", {"forceInput": True}),
             }
         }
 
@@ -50,6 +52,8 @@ class LZPipePackXL:
                 "height": ("INT", {"forceInput": True}),
                 "ckpt_name": ("STRING", {"forceInput": True}),
                 "ckpt_hash": ("STRING", {"forceInput": True}),
+                "lora_name": ("STRING", {"forceInput": True}),
+                "lora_strength": ("STRING", {"forceInput": True}),
                 "x_type": (param_options, {"default": "none"}),
                 "x_values": ("STRING", {"multiline": True, "default": ""}),
                 "y_type": (param_options, {"default": "none"}),
@@ -108,8 +112,8 @@ class LZPipeUnpack:
             "required": { "lz_pipe": ("LZ_PIPE",), }
         }
 
-    RETURN_TYPES = ("MODEL", "CLIP", "VAE", "CONDITIONING", "CONDITIONING", "LATENT", "STRING", "STRING", "INT", "INT", "STRING", "STRING")
-    RETURN_NAMES = ("MODEL", "CLIP", "VAE", "positive", "negative", "LATENT", "positive_text", "negative_text", "width", "height", "ckpt_name", "ckpt_hash")
+    RETURN_TYPES = ("MODEL", "CLIP", "VAE", "CONDITIONING", "CONDITIONING", "LATENT", "STRING", "STRING", "INT", "INT", "STRING", "STRING", "STRING", "STRING")
+    RETURN_NAMES = ("MODEL", "CLIP", "VAE", "positive", "negative", "LATENT", "positive_text", "negative_text", "width", "height", "ckpt_name", "ckpt_hash", "lora_name", "lora_strength")
     FUNCTION = "unpack"
     CATEGORY = "MyCustomNodes/Pipe"
 
@@ -119,5 +123,6 @@ class LZPipeUnpack:
             lz_pipe.get("positive"), lz_pipe.get("negative"), lz_pipe.get("latent"),
             lz_pipe.get("positive_text", ""), lz_pipe.get("negative_text", ""),
             lz_pipe.get("width", 0), lz_pipe.get("height", 0),
-            lz_pipe.get("ckpt_name", "Unknown"), lz_pipe.get("ckpt_hash", "Unknown")
+            lz_pipe.get("ckpt_name", "Unknown"), lz_pipe.get("ckpt_hash", "Unknown"),
+            lz_pipe.get("lora_name", ""), lz_pipe.get("lora_strength", "")
         )

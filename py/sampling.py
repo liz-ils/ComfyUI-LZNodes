@@ -79,8 +79,12 @@ class LZKSamplerDecode:
         vae_decoder = nodes.VAEDecode()
         image = vae_decoder.decode(vae, sampled_latent)[0]
 
-        width = kwargs.get("width", lz_pipe.get("width", 0))
-        height = kwargs.get("height", lz_pipe.get("height", 0))
+        # width/height → 入力優先、なければlatentから自動計算
+        w = kwargs.get("width") or (lz_pipe or {}).get("width")
+        h = kwargs.get("height") or (lz_pipe or {}).get("height")
+        if (w is None or h is None) and sampled_latent is not None:
+            w = sampled_latent["samples"].shape[3] * 8
+            h = sampled_latent["samples"].shape[2] * 8
 
         new_pipe = lz_pipe.copy()
         new_pipe["model"] = model
@@ -96,5 +100,11 @@ class LZKSamplerDecode:
         new_pipe["cfg"] = cfg
         new_pipe["sampler_name"] = sampler_name
         new_pipe["scheduler"] = scheduler
+        new_pipe["width"] = w
+        new_pipe["height"] = h
+        new_pipe["ckpt_name"] = (lz_pipe or {}).get("ckpt_name", "Unknown")
+        new_pipe["ckpt_hash"] = (lz_pipe or {}).get("ckpt_hash", "Unknown")
+        new_pipe["lora_name"] = (lz_pipe or {}).get("lora_name", "")
+        new_pipe["lora_strength"] = (lz_pipe or {}).get("lora_strength", "")
 
-        return (image, new_pipe, pos_text, neg_text, width, height)
+        return (image, new_pipe, pos_text, neg_text, w, h)
