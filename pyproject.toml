@@ -10,7 +10,7 @@ Documentation = "https://github.com/liz-ils/ComfyUI-LZNodes/wiki"
 "Bug Tracker" = "https://github.com/liz-ils/ComfyUI-LZNodes/issues"
 
 [tool.comfy]
-publisher_id = "liz-ils"
+PublisherId = "liz-ils"
 node_id = "lznodes"
 display_name = "ComfyUI-LZNodes"
 icon = ""
