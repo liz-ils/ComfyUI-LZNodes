@@ -1,7 +1,7 @@
 [project]
 name = "lznodes"
 description = "Custom nodes for ComfyUI"
-version = "1.1.1"
+version = "1.1.2"
 license = "MIT"
 
 [project.urls]
@@ -11,7 +11,7 @@ Documentation = "https://github.com/liz-ils/ComfyUI-LZNodes/wiki"
 
 [tool.comfy]
 PublisherId = "liz-ils"
-node_id = "lznodes"
-display_name = "ComfyUI-LZNodes"
+nodeid = "lznodes"
+displayname = "ComfyUI-LZNodes"
 icon = ""
 includes = ["."]
