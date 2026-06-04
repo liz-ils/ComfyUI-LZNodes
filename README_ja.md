@@ -2,8 +2,6 @@
 
 ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向けのカスタムノード集です。複雑になりがちなノードの配線を簡略化し、画像生成プロセスをより快適にするために設計されています。
 
-制作者: Liz
-
 [English Version](README.md)
 
 ## 主な機能
@@ -16,6 +14,10 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
     *   `LZSimpleCheckpointLoader`: モデルの各コンポーネントを取り出すことに特化した軽量なローダーです。
     *   `LZLoRAStacker`: 最大10個までのLoRAを簡単にスタック可能です。キャッシュ機能により高速な生成をサポートします。
     *   `LZAnimaLoader`: Animaモデル専用のローダーで、拡散モデル、テキストエンコーダー、VAEを個別に読み込みます。
+*   **Anima Artist Mixer**:
+    *   `LZAnimaArtistNode`: 統合ノード。画師チェーンの分割・エンコードと cross-attention 注入を1ステップで実行。`(MODEL, CONDITIONING, STRING)` を出力し、`positive_text` を直接パイプシステムに接続可能。
+    *   `LZAnimaArtistPack` / `LZAnimaArtistCrossAttn`: 分割・エンコードと cross-attn 注入を分離したノード（上級者向け）。`LZAnimaArtistCrossAttn` も `positive_text` (STRING) を出力。
+    *   `LZAnimaArtistOptions`: ブロック範囲、fusionモード、EMA平滑化、低ランク注入、static capture、anchor Q を細かく設定するための高度なオプションノード。
 *   **プロンプト管理**:
     *   `AdvancedPositivePrompt` / `AdvancedNegativePrompt`: 基本のプロンプト、アーティストタグ、クオリティタグなどを綺麗に分けて入力できます。内部で自動的に結合＆エンコードされます。
     *   `DualCLIPTextEncode`: ポジティブプロンプトとネガティブプロンプトを横並びで同時にエンコードするノードです。
@@ -42,6 +44,7 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
 | カテゴリ | ノード名 |
 |---|---|
 | **Loaders** | EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader |
+| **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions |
 | **Prompt** | DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZPromptWeight, LZTagEditor |
 | **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString |
 | **Latent** | PresetEmptyLatentImage |
@@ -73,3 +76,31 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
 ## ライセンス
 
 このプロジェクトは MIT License の下で公開されています。詳細は [LICENSE](LICENSE) ファイルをご覧ください。
+
+## サードパーティーノードについて
+**Anima Artist Mixer** - `LZAnimaArtistNode`、`LZAnimaArtistPack`、`LZAnimaArtistCrossAttn`、`LZAnimaArtistOptions` は [Anima-Artist-Mixer](https://github.com/An1X3R/Anima-Artist-Mixer) (by An1X3R and 汐浮尘) のコードをベースに改変しています。
+- MIT License に基づき使用しています：
+
+```
+MIT License
+
+Copyright (c) 2026 An1X3R and 汐浮尘
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

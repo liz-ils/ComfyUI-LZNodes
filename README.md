@@ -2,8 +2,6 @@
 
 ComfyUI-LZNodes is a collection of custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) designed to simplify complex node workflows and enhance the image generation process.
 
-Created by Liz.
-
 [日本語版 (Japanese Version)](README_ja.md)
 
 ## Features
@@ -16,6 +14,10 @@ This extension provides several quality-of-life nodes that condense common workf
     *   `LZSimpleCheckpointLoader`: A lightweight loader strictly for extracting model components.
     *   `LZLoRAStacker`: Easily stack up to 10 LoRAs with built-in caching for faster generation.
     *   `LZAnimaLoader`: Specialized loader for Anima models that loads the diffusion model, text encoder, and VAE separately.
+*   **Anima Artist Mixer**:
+    *   `LZAnimaArtistNode`: Combined node that splits/encodes artist chains and applies cross-attention injection in one step. Outputs `(MODEL, CONDITIONING, STRING)` with the base prompt text as `positive_text` for direct connection to the pipe system.
+    *   `LZAnimaArtistPack` / `LZAnimaArtistCrossAttn`: Separate split-encode and cross-attn injection nodes for advanced workflows. `LZAnimaArtistCrossAttn` also outputs `positive_text` (STRING).
+    *   `LZAnimaArtistOptions`: Advanced options for fine-tuning block ranges, fusion modes, EMA smoothing, low-rank injection, static capture, and anchor Q.
 *   **Prompt Management**:
     *   `AdvancedPositivePrompt` / `AdvancedNegativePrompt`: Cleanly separate base prompts, artist tags, and quality tags. Automatically concatenates and encodes them.
     *   `DualCLIPTextEncode`: Encodes both positive and negative prompts simultaneously.
@@ -42,6 +44,7 @@ This extension provides several quality-of-life nodes that condense common workf
 | Category | Nodes |
 |---|---|
 | **Loaders** | EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader |
+| **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions |
 | **Prompt** | DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZPromptWeight, LZTagEditor |
 | **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString |
 | **Latent** | PresetEmptyLatentImage |
@@ -73,3 +76,31 @@ Once installed, the nodes can be found in the ComfyUI add-node menu under the `M
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## About Third-Party Nodes
+**Anima Artist Mixer** - `LZAnimaArtistNode`, `LZAnimaArtistPack`, `LZAnimaArtistCrossAttn`, and `LZAnimaArtistOptions` are modified versions of the code from [Anima-Artist-Mixer](https://github.com/An1X3R/Anima-Artist-Mixer) (by An1X3R and 汐浮尘).
+- Used under the MIT License:
+
+```
+MIT License
+
+Copyright (c) 2026 An1X3R and 汐浮尘
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
