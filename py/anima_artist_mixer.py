@@ -2,7 +2,7 @@
 
 MIT License
 
-Copyright (c) 2026 An1X3R and �汐浮尘
+Copyright (c) 2026 An1X3R and 汐浮尘
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -905,7 +905,7 @@ class LZAnimaArtistPack:
     RETURN_TYPES = ("ANIMA_PACK",)
     RETURN_NAMES = ("artist_pack",)
     FUNCTION = "pack"
-    CATEGORY = "LZNodes/Anima"
+    CATEGORY = "MyCustomNodes/Anima"
 
     def pack(self, clip, artist_chain, base_prompt=""):
         parts = _split_artist_chain(artist_chain)
@@ -1086,7 +1086,7 @@ class LZAnimaArtistOptions:
     RETURN_TYPES = ("ANIMA_OPTS",)
     RETURN_NAMES = ("advanced_options",)
     FUNCTION = "build"
-    CATEGORY = "LZNodes/Anima"
+    CATEGORY = "MyCustomNodes/Anima"
 
     def build(self, start_block, end_block, start_percent, end_percent, normalize_weights,
               artist_ema_alpha=0.0, lowrank_k=1, artist_static_capture=False,
@@ -1147,7 +1147,7 @@ class LZAnimaArtistCrossAttn:
     RETURN_TYPES = ("MODEL", "CONDITIONING", "STRING")
     RETURN_NAMES = ("model", "base_prompt", "positive_text")
     FUNCTION = "patch"
-    CATEGORY = "LZNodes/Anima"
+    CATEGORY = "MyCustomNodes/Anima"
 
     def patch(self, model, artist_pack, combine_mode, fusion_mode,
               strength, enabled, apply_to_uncond, advanced_options=None):
@@ -1201,9 +1201,6 @@ class LZAnimaArtistCrossAttn:
                 "fusion=concat_with_base incompatible. anchor_q disabled."
             )
             artist_anchor_q = False
-
-        if fusion_mode == FUSION_BASE_PRESERVE and combine_mode == COMBINE_CONCAT:
-            pass
 
         if not isinstance(artist_pack, dict):
             raise ValueError(
@@ -1418,7 +1415,7 @@ class LZAnimaArtistNode:
     RETURN_TYPES = ("MODEL", "CONDITIONING", "STRING")
     RETURN_NAMES = ("model", "base_prompt", "positive_text")
     FUNCTION = "process"
-    CATEGORY = "LZNodes/Anima"
+    CATEGORY = "MyCustomNodes/Anima"
 
     def process(self, clip, model, artist_chain, combine_mode, fusion_mode,
                 strength, enabled, apply_to_uncond,

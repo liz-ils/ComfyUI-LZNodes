@@ -53,27 +53,19 @@ class LZAppendLogToCSV:
         checkpoint_name = lz_pipe.get("ckpt_name", kwargs.get("checkpoint_name", ""))
         
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        headers = ["timestamp", "seed", "steps", "cfg", "sampler", "scheduler", "width", "height", "checkpoint", "positive_prompt", "negative_prompt"]
-        row = [timestamp, seed, steps, cfg, sampler_name, scheduler, width, height, checkpoint_name, positive_prompt, negative_prompt]
-        
-        rows = []
-        write_header = False
-        
-        if mode == "append" and os.path.exists(filepath):
-            with open(filepath, "r", encoding="utf-8") as f:
-                reader = csv.reader(f)
-                rows = list(reader)
-        else:
-            write_header = True
-        
-        if write_header:
-            rows.append(headers)
-        
-        rows.append(row)
-        
-        with open(filepath, "w", encoding="utf-8", newline="") as f:
+        image_count = kwargs.get("image_count", 1)
+
+        headers = ["timestamp", "seed", "steps", "cfg", "sampler", "scheduler", "width", "height", "checkpoint", "image_count", "positive_prompt", "negative_prompt"]
+        row = [timestamp, seed, steps, cfg, sampler_name, scheduler, width, height, checkpoint_name, image_count, positive_prompt, negative_prompt]
+
+        file_exists = os.path.exists(filepath)
+        append_mode = (mode == "append" and file_exists)
+
+        with open(filepath, "a" if append_mode else "w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
-            writer.writerows(rows)
-        
+            # ヘッダは新規作成時のみ書き込む(既存ファイルへの追記時は書かない)
+            if not append_mode:
+                writer.writerow(headers)
+            writer.writerow(row)
+
         return (os.path.abspath(filepath),)

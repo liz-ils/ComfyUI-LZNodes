@@ -1,8 +1,12 @@
 [project]
 name = "lznodes"
 description = "Custom nodes for ComfyUI"
-version = "1.1.3"
-license = "MIT"
+version = "1.2.0"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+classifiers = [
+    "Operating System :: OS Independent",
+]
 
 [project.urls]
 Repository = "https://github.com/liz-ils/ComfyUI-LZNodes"
@@ -11,7 +15,4 @@ Documentation = "https://github.com/liz-ils/ComfyUI-LZNodes/wiki"
 
 [tool.comfy]
 PublisherId = "liz-ils"
-nodeid = "lznodes"
-displayname = "ComfyUI-LZNodes"
-icon = ""
-includes = ["."]
+DisplayName = "ComfyUI-LZNodes"

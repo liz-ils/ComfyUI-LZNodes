@@ -1,5 +1,7 @@
 # text_utils.py
 
+from .utils import sanitize_filename
+
 class StringNode:
     @classmethod
     def INPUT_TYPES(s):
@@ -55,8 +57,6 @@ class StringConcatNode:
         result = separator.join(texts)
         return (result,)
         
-LZBannedChars = r'\/?"<>\:|*'
-
 class LZTextPreview:
     @classmethod
     def INPUT_TYPES(s):
@@ -96,16 +96,9 @@ class LZStringSanitize:
     CATEGORY = "MyCustomNodes/Text"
 
     def clean(self, text, mode, replace_with="_"):
-        for char in LZBannedChars:
-            if mode == "remove":
-                text = text.replace(char, "")
-            else:
-                text = text.replace(char, replace_with)
-        
-        if text.endswith("."):
-            text = text[:-1]
-        
-        return (text,)
+        if mode == "remove":
+            return (sanitize_filename(text, replace_with=""),)
+        return (sanitize_filename(text, replace_with=replace_with),)
 
 
 class LZStringSelect:
@@ -168,31 +161,23 @@ class LZSaveStringToCSV:
     def save_csv(self, filepath, mode, header, row_data):
         import os
         import csv
-        
+
         filepath = filepath.strip()
         if not filepath:
             filepath = "output.csv"
-        
-        rows = []
-        write_header = False
-        
-        if mode == "append" and os.path.exists(filepath):
-            with open(filepath, "r", encoding="utf-8") as f:
-                reader = csv.reader(f)
-                rows = list(reader)
-        else:
-            write_header = True
-        
-        if write_header and header:
-            rows.append([h.strip() for h in header.split(",")])
-        
-        if row_data.strip():
-            rows.append([d.strip() for d in row_data.split(",")])
-        
-        with open(filepath, "w", encoding="utf-8", newline="") as f:
+
+        file_exists = os.path.exists(filepath)
+        append_mode = (mode == "append" and file_exists)
+        # ヘッダは新規作成時のみ書き込む(既存ファイルへの追記時は書かない)
+        write_header = not append_mode
+
+        with open(filepath, "a" if append_mode else "w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
-            writer.writerows(rows)
-        
+            if write_header and header:
+                writer.writerow([h.strip() for h in header.split(",")])
+            if row_data.strip():
+                writer.writerow([d.strip() for d in row_data.split(",")])
+
         return (os.path.abspath(filepath),)
 
 
@@ -273,32 +258,49 @@ class LZTagEditor:
     def edit_tags(self, input_string, **kwargs):
         import re
 
+        # input_string をパースしてベースのタグリストを作成
         parsed = {}
+        order = []
         parts = [p.strip() for p in input_string.split(",")] if input_string.strip() else []
         for part in parts:
             if not part:
                 continue
             match = re.match(r'^\((.+):([\d.]+)\)$', part.strip())
             if match:
-                parsed[match.group(1).strip()] = float(match.group(2))
+                name = match.group(1).strip()
+                weight = float(match.group(2))
             else:
-                parsed[part.strip()] = 1.0
+                name = part.strip()
+                weight = 1.0
+            if name and name not in parsed:
+                parsed[name] = weight
+                order.append(name)
 
-        tags = []
+        # tag1〜10 の入力で上書き・追加・削除
         for i in range(1, 11):
             tag_name = kwargs.get(f"tag{i}_name", "").strip()
+            if not tag_name:
+                break
             tag_strength = kwargs.get(f"tag{i}_strength", 1.0)
             tag_on = kwargs.get(f"tag{i}_onoff", True)
 
-            if tag_name:
-                if not tag_on:
-                    continue
-                if tag_strength != 1.0:
-                    tags.append(f"({tag_name}:{tag_strength})")
+            if tag_name in parsed:
+                if tag_on:
+                    parsed[tag_name] = tag_strength
                 else:
-                    tags.append(tag_name)
+                    order.remove(tag_name)
+                    del parsed[tag_name]
+            elif tag_on:
+                parsed[tag_name] = tag_strength
+                order.append(tag_name)
+
+        tags = []
+        for name in order:
+            weight = parsed[name]
+            if weight != 1.0:
+                tags.append(f"({name}:{weight})")
             else:
-                break
+                tags.append(name)
 
         result = ",".join(tags)
         return (result,)

@@ -9,38 +9,8 @@ import comfy.samplers
 import comfy.utils
 import nodes
 import gc
-import os
-import hashlib
 
-CHECKPOINT_HASH_CACHE = {}
-CHECKPOINT_LOADER_CACHE = {}
-
-
-def get_checkpoint_hash(file_path):
-    if not file_path or not os.path.exists(file_path):
-        return "Unknown"
-
-    mtime = os.path.getmtime(file_path)
-    if file_path in CHECKPOINT_HASH_CACHE:
-        cached_mtime, cached_hash = CHECKPOINT_HASH_CACHE[file_path]
-        if cached_mtime == mtime:
-            return cached_hash
-
-    sha256_hash = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        for byte_block in iter(lambda: f.read(4 * 1024 * 1024), b""):
-            sha256_hash.update(byte_block)
-
-    short_hash = sha256_hash.hexdigest()[:10]
-    CHECKPOINT_HASH_CACHE[file_path] = (mtime, short_hash)
-    return short_hash
-
-
-def parse_values(text):
-    if not text:
-        return []
-    lines = text.strip().split('\n')
-    return [line.strip() for line in lines if line.strip()]
+from .utils import get_checkpoint_hash, parse_values
 
 
 def escape_prompt(text, enabled=True):
@@ -55,11 +25,63 @@ def replace_prompt_text(base_prompt, replace_key, new_value, escape=True):
     if not replace_key:
         return new_value
 
+    if escape:
+        # ベース側も同じ規則でエスケープしないとキーが一致しない
+        base_prompt = escape_prompt(base_prompt, True)
     replace_key_escaped = escape_prompt(replace_key, escape)
     new_value_escaped = escape_prompt(new_value, escape)
 
     result = base_prompt.replace(replace_key_escaped, new_value_escaped)
     return result
+
+
+def load_checkpoint_for_value(value):
+    """XY軸のcheckpoint値からモデルを読み込む。"""
+    ckpt_path = folder_paths.get_full_path("checkpoints", value)
+    if ckpt_path is None:
+        raise ValueError(f"LZ XY Error: Checkpoint not found: {value}")
+
+    out = comfy.sd.load_checkpoint_guess_config(
+        ckpt_path,
+        output_vae=True,
+        output_clip=True,
+        embedding_directory=folder_paths.get_folder_paths("embeddings")
+    )
+    model, clip, vae = out[:3]
+    ckpt_hash = get_checkpoint_hash(ckpt_path)
+    return model, clip, vae, ckpt_hash
+
+
+def apply_lora_value(value, model, clip, loaded_loras):
+    """XY軸のlora値 ("name:model_weight:clip_weight") を適用する。"""
+    parts = value.split(":")
+    lora_name = parts[0]
+    model_weight = float(parts[1]) if len(parts) > 1 else 1.0
+    clip_weight = float(parts[2]) if len(parts) > 2 else 1.0
+
+    if model_weight == 0 and clip_weight == 0:
+        return model, clip
+
+    lora_path = folder_paths.get_full_path("loras", lora_name)
+    if lora_path is None:
+        raise ValueError(f"LZ XY Error: LoRA not found: {lora_name}")
+
+    if lora_path in loaded_loras:
+        lora = loaded_loras[lora_path]
+    else:
+        lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+        loaded_loras[lora_path] = lora
+
+    model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
+    return model, clip
+
+
+def encode_replaced_prompt(clip, base_text, replace_key, value, escape):
+    """置換キーでプロンプトを差し替えてCLIPエンコードする。"""
+    replaced_text = replace_prompt_text(base_text, replace_key, value, escape)
+    tokens = clip.tokenize(replaced_text)
+    cond = clip.encode_from_tokens_scheduled(tokens)
+    return cond, replaced_text
 
 
 class LZXYPlot:
@@ -171,6 +193,8 @@ class LZXYPlotSampler:
 
         if lz_pipe is None:
             lz_pipe = {}
+        # 入力パイプは書き換えずコピーして使う
+        base_pipe = dict(lz_pipe) if isinstance(lz_pipe, dict) else {}
 
         x_list = parse_values(x_values)
         y_list = parse_values(y_values)
@@ -188,8 +212,6 @@ class LZXYPlotSampler:
             y_list = ["idx"]
             y_type = "none"
 
-        images_list = []
-
         # 幅高さの取得: latent_image > lz_pipe > 未定義(エラー)
         width = 0
         height = 0
@@ -200,11 +222,11 @@ class LZXYPlotSampler:
             width = latent_w * 8
             height = latent_h * 8
         else:
-            width = lz_pipe.get("width", 0)
-            height = lz_pipe.get("height", 0)
+            width = base_pipe.get("width", 0)
+            height = base_pipe.get("height", 0)
 
         if latent_image is None:
-            latent_image = lz_pipe.get("latent")
+            latent_image = base_pipe.get("latent")
         if latent_image is None:
             if width <= 0 or height <= 0:
                 raise ValueError("LZXYPlotSampler Error: latent_image or valid width/height required.")
@@ -212,144 +234,96 @@ class LZXYPlotSampler:
             latent_h = height // 8
             latent_image = {"samples": torch.randn([1, 4, latent_h, latent_w])}
 
-        base_model = lz_pipe.get("model")
-        base_clip = lz_pipe.get("clip")
-        base_vae = lz_pipe.get("vae")
-        base_positive = lz_pipe.get("positive")
-        base_negative = lz_pipe.get("negative")
-        base_pos_text = lz_pipe.get("positive_text", "")
-        base_neg_text = lz_pipe.get("negative_text", "")
+        base_model = base_pipe.get("model")
+        base_clip = base_pipe.get("clip")
+        base_vae = base_pipe.get("vae")
+        base_positive = base_pipe.get("positive")
+        base_negative = base_pipe.get("negative")
+        base_pos_text = base_pipe.get("positive_text", "")
+        base_neg_text = base_pipe.get("negative_text", "")
+
+        # positive_textからCONDITIONINGへの自動エンコード
+        if base_positive is None and base_pos_text != "":
+            if base_clip is None:
+                raise ValueError("LZXYPlotSampler Error: CLIP is required to encode positive_text.")
+            tokens_pos = base_clip.tokenize(base_pos_text)
+            base_positive = base_clip.encode_from_tokens_scheduled(tokens_pos)
+
+        # negative_textからCONDITIONINGへの自動エンコード
+        if base_negative is None and base_neg_text != "":
+            if base_clip is None:
+                raise ValueError("LZXYPlotSampler Error: CLIP is required to encode negative_text.")
+            tokens_neg = base_clip.tokenize(base_neg_text)
+            base_negative = base_clip.encode_from_tokens_scheduled(tokens_neg)
+
+        if base_model is None or base_positive is None or base_negative is None:
+            raise ValueError("LZXYPlotSampler Error: Missing required data (model, positive, negative).")
 
         current_model = base_model
         current_clip = base_clip
         current_vae = base_vae
+        current_ckpt_name = base_pipe.get("ckpt_name", "Unknown")
+        current_ckpt_hash = base_pipe.get("ckpt_hash", "Unknown")
+        current_sampler = sampler_name
+        current_scheduler = scheduler
+        current_pos_text = base_pos_text
+        current_neg_text = base_neg_text
+
+        images_list = []
 
         for y_idx, y_val in enumerate(y_list):
             for x_idx, x_val in enumerate(x_list):
                 model = current_model
                 clip = current_clip
                 vae = current_vae
+                ckpt_name = current_ckpt_name
+                ckpt_hash = current_ckpt_hash
+                iter_sampler = current_sampler
+                iter_scheduler = current_scheduler
+                pos_text = current_pos_text
+                neg_text = current_neg_text
+                positive = base_positive
+                negative = base_negative
 
+                # --- X軸の値を適用 ---
                 if x_type == "checkpoint":
+                    model, clip, vae, ckpt_hash = load_checkpoint_for_value(x_val)
                     ckpt_name = x_val
-                    ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
-                    if ckpt_path is None:
-                        raise ValueError(f"LZXYPlotSampler Error: Checkpoint not found: {ckpt_name}")
-
-                    if model is not None:
-                        del model
-                        del clip
-                        del vae
-                        gc.collect()
-
-                    out = comfy.sd.load_checkpoint_guess_config(
-                        ckpt_path,
-                        output_vae=True,
-                        output_clip=True,
-                        embedding_directory=folder_paths.get_folder_paths("embeddings")
-                    )
-                    model, clip, vae = out[:3]
-
-                    ckpt_hash = get_checkpoint_hash(ckpt_path)
-                    lz_pipe["ckpt_name"] = ckpt_name
-                    lz_pipe["ckpt_hash"] = ckpt_hash
-
+                    gc.collect()
                 elif x_type == "lora":
-                    parts = x_val.split(":")
-                    lora_name = parts[0]
-                    model_weight = float(parts[1]) if len(parts) > 1 else 1.0
-                    clip_weight = float(parts[2]) if len(parts) > 2 else 1.0
-
-                    if model_weight == 0 and clip_weight == 0:
-                        pass
-                    else:
-                        lora_path = folder_paths.get_full_path("loras", lora_name)
-                        if lora_path is None:
-                            raise ValueError(f"LZXYPlotSampler Error: LoRA not found: {lora_name}")
-
-                        if lora_path in self.loaded_loras:
-                            lora = self.loaded_loras[lora_path]
-                        else:
-                            lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-                            self.loaded_loras[lora_path] = lora
-
-                        model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
-
-                if y_type == "checkpoint":
-                    ckpt_name = y_val
-                    ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
-                    if ckpt_path is None:
-                        raise ValueError(f"LZXYPlotSampler Error: Checkpoint not found: {ckpt_name}")
-
-                    if model is not None:
-                        del model
-                        del clip
-                        del vae
-                        gc.collect()
-
-                    out = comfy.sd.load_checkpoint_guess_config(
-                        ckpt_path,
-                        output_vae=True,
-                        output_clip=True,
-                        embedding_directory=folder_paths.get_folder_paths("embeddings")
-                    )
-                    model, clip, vae = out[:3]
-
-                    ckpt_hash = get_checkpoint_hash(ckpt_path)
-                    lz_pipe["ckpt_name"] = ckpt_name
-                    lz_pipe["ckpt_hash"] = ckpt_hash
-
-                elif y_type == "lora":
-                    parts = y_val.split(":")
-                    lora_name = parts[0]
-                    model_weight = float(parts[1]) if len(parts) > 1 else 1.0
-                    clip_weight = float(parts[2]) if len(parts) > 2 else 1.0
-
-                    if model_weight == 0 and clip_weight == 0:
-                        pass
-                    else:
-                        lora_path = folder_paths.get_full_path("loras", lora_name)
-                        if lora_path is None:
-                            raise ValueError(f"LZXYPlotSampler Error: LoRA not found: {lora_name}")
-
-                        if lora_path in self.loaded_loras:
-                            lora = self.loaded_loras[lora_path]
-                        else:
-                            lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-                            self.loaded_loras[lora_path] = lora
-
-                        model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
-
-                if y_type == "positive":
+                    model, clip = apply_lora_value(x_val, model, clip, self.loaded_loras)
+                elif x_type == "positive":
                     if clip is None:
                         raise ValueError("LZXYPlotSampler Error: CLIP is required for positive prompt encoding.")
-                    replaced_text = replace_prompt_text(base_pos_text, y_replace_key, y_val, replace_escape)
-                    tokens_pos = clip.tokenize(replaced_text)
-                    positive = clip.encode_from_tokens_scheduled(tokens_pos)
-                    lz_pipe["positive_text"] = replaced_text
+                    positive, pos_text = encode_replaced_prompt(clip, base_pos_text, x_replace_key, x_val, replace_escape)
+                elif x_type == "negative":
+                    if clip is None:
+                        raise ValueError("LZXYPlotSampler Error: CLIP is required for negative prompt encoding.")
+                    negative, neg_text = encode_replaced_prompt(clip, base_neg_text, x_replace_key, x_val, replace_escape)
+                elif x_type == "sampler":
+                    iter_sampler = x_val
+                elif x_type == "scheduler":
+                    iter_scheduler = x_val
 
+                # --- Y軸の値を適用 ---
+                if y_type == "checkpoint":
+                    model, clip, vae, ckpt_hash = load_checkpoint_for_value(y_val)
+                    ckpt_name = y_val
+                    gc.collect()
+                elif y_type == "lora":
+                    model, clip = apply_lora_value(y_val, model, clip, self.loaded_loras)
+                elif y_type == "positive":
+                    if clip is None:
+                        raise ValueError("LZXYPlotSampler Error: CLIP is required for positive prompt encoding.")
+                    positive, pos_text = encode_replaced_prompt(clip, base_pos_text, y_replace_key, y_val, replace_escape)
                 elif y_type == "negative":
                     if clip is None:
                         raise ValueError("LZXYPlotSampler Error: CLIP is required for negative prompt encoding.")
-                    replaced_text = replace_prompt_text(base_neg_text, y_replace_key, y_val, replace_escape)
-                    tokens_neg = clip.tokenize(replaced_text)
-                    negative = clip.encode_from_tokens_scheduled(tokens_neg)
-                    lz_pipe["negative_text"] = replaced_text
-
+                    negative, neg_text = encode_replaced_prompt(clip, base_neg_text, y_replace_key, y_val, replace_escape)
                 elif y_type == "sampler":
-                    lz_pipe["sampler_name"] = y_val
-
+                    iter_sampler = y_val
                 elif y_type == "scheduler":
-                    lz_pipe["scheduler"] = y_val
-
-                if y_type == "none" or y_type not in ["positive", "negative"]:
-                    positive = base_positive
-                    negative = base_negative
-
-                if y_type == "none" or y_type == "sampler":
-                    sampler_name = lz_pipe.get("sampler_name", sampler_name)
-                if y_type == "none" or y_type == "scheduler":
-                    scheduler = lz_pipe.get("scheduler", scheduler)
+                    iter_scheduler = y_val
 
                 if model is None or positive is None or negative is None:
                     raise ValueError("LZXYPlotSampler Error: Missing required data (model, positive, negative).")
@@ -360,7 +334,7 @@ class LZXYPlotSampler:
                 current_seed = seed + (y_idx * len(x_list) + x_idx)
 
                 ksampler = nodes.KSampler()
-                sampled_latent = ksampler.sample(model, current_seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image, denoise)[0]
+                sampled_latent = ksampler.sample(model, current_seed, steps, cfg, iter_sampler, iter_scheduler, positive, negative, latent_image, denoise)[0]
 
                 vae_decoder = nodes.VAEDecode()
                 image = vae_decoder.decode(vae, sampled_latent)[0]
@@ -370,6 +344,12 @@ class LZXYPlotSampler:
                 current_model = model
                 current_clip = clip
                 current_vae = vae
+                current_ckpt_name = ckpt_name
+                current_ckpt_hash = ckpt_hash
+                current_sampler = iter_sampler
+                current_scheduler = iter_scheduler
+                current_pos_text = pos_text
+                current_neg_text = neg_text
 
         if len(images_list) == 0:
             raise ValueError("LZXYPlotSampler Error: No images generated.")
@@ -379,11 +359,17 @@ class LZXYPlotSampler:
         x_labels = [v for v in x_list]
         y_labels = [v for v in y_list]
 
-        new_pipe = lz_pipe.copy()
+        new_pipe = base_pipe.copy()
         new_pipe["model"] = current_model
         new_pipe["clip"] = current_clip
         new_pipe["vae"] = current_vae
         new_pipe["latent"] = latent_image
+        new_pipe["ckpt_name"] = current_ckpt_name
+        new_pipe["ckpt_hash"] = current_ckpt_hash
+        new_pipe["sampler_name"] = current_sampler
+        new_pipe["scheduler"] = current_scheduler
+        new_pipe["positive_text"] = current_pos_text
+        new_pipe["negative_text"] = current_neg_text
 
         return (images_tensor, new_pipe, ",".join(x_labels), ",".join(y_labels), x_replace_key if x_replace_key else "", y_replace_key if y_replace_key else "", width, height)
 
@@ -581,65 +567,28 @@ class LZXYSampler:
                 temp_scheduler = scheduler
 
                 if x_type == "checkpoint":
-                    ckpt_name = x_val
-                    ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
-                    if ckpt_path is None:
-                        raise ValueError(f"LZXYSampler Error: Checkpoint not found: {ckpt_name}")
-
-                    if model is not None:
-                        del model
-                        del clip
-                        del vae
-                        gc.collect()
-
-                    out = comfy.sd.load_checkpoint_guess_config(
-                        ckpt_path,
-                        output_vae=True,
-                        output_clip=True,
-                        embedding_directory=folder_paths.get_folder_paths("embeddings")
-                    )
-                    model, clip, vae = out[:3]
+                    model, clip, vae, ckpt_hash = load_checkpoint_for_value(x_val)
                     temp_pipe["model"] = model
                     temp_pipe["clip"] = clip
                     temp_pipe["vae"] = vae
-                    temp_pipe["ckpt_name"] = ckpt_name
+                    temp_pipe["ckpt_name"] = x_val
+                    temp_pipe["ckpt_hash"] = ckpt_hash
+                    gc.collect()
 
                 elif x_type == "lora":
-                    parts = x_val.split(":")
-                    lora_name = parts[0]
-                    model_weight = float(parts[1]) if len(parts) > 1 else 1.0
-                    clip_weight = float(parts[2]) if len(parts) > 2 else 1.0
-
-                    if model_weight != 0 or clip_weight != 0:
-                        lora_path = folder_paths.get_full_path("loras", lora_name)
-                        if lora_path is None:
-                            raise ValueError(f"LZXYSampler Error: LoRA not found: {lora_name}")
-
-                        if lora_path in self.loaded_loras:
-                            lora = self.loaded_loras[lora_path]
-                        else:
-                            lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-                            self.loaded_loras[lora_path] = lora
-
-                        model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
-                        temp_pipe["model"] = model
-                        temp_pipe["clip"] = clip
+                    model, clip = apply_lora_value(x_val, model, clip, self.loaded_loras)
+                    temp_pipe["model"] = model
+                    temp_pipe["clip"] = clip
 
                 elif x_type == "positive":
                     if clip is None:
                         raise ValueError("LZXYSampler Error: CLIP is required for positive prompt encoding.")
-                    replaced_text = replace_prompt_text(base_pos_text, x_replace_key, x_val, replace_escape)
-                    tokens_pos = clip.tokenize(replaced_text)
-                    temp_positive = clip.encode_from_tokens_scheduled(tokens_pos)
-                    temp_pos_text = replaced_text
+                    temp_positive, temp_pos_text = encode_replaced_prompt(clip, base_pos_text, x_replace_key, x_val, replace_escape)
 
                 elif x_type == "negative":
                     if clip is None:
                         raise ValueError("LZXYSampler Error: CLIP is required for negative prompt encoding.")
-                    replaced_text = replace_prompt_text(base_neg_text, x_replace_key, x_val, replace_escape)
-                    tokens_neg = clip.tokenize(replaced_text)
-                    temp_negative = clip.encode_from_tokens_scheduled(tokens_neg)
-                    temp_neg_text = replaced_text
+                    temp_negative, temp_neg_text = encode_replaced_prompt(clip, base_neg_text, x_replace_key, x_val, replace_escape)
 
                 elif x_type == "sampler":
                     temp_sampler = x_val
@@ -648,65 +597,28 @@ class LZXYSampler:
                     temp_scheduler = x_val
 
                 if y_type == "checkpoint":
-                    ckpt_name = y_val
-                    ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
-                    if ckpt_path is None:
-                        raise ValueError(f"LZXYSampler Error: Checkpoint not found: {ckpt_name}")
-
-                    if model is not None:
-                        del model
-                        del clip
-                        del vae
-                        gc.collect()
-
-                    out = comfy.sd.load_checkpoint_guess_config(
-                        ckpt_path,
-                        output_vae=True,
-                        output_clip=True,
-                        embedding_directory=folder_paths.get_folder_paths("embeddings")
-                    )
-                    model, clip, vae = out[:3]
+                    model, clip, vae, ckpt_hash = load_checkpoint_for_value(y_val)
                     temp_pipe["model"] = model
                     temp_pipe["clip"] = clip
                     temp_pipe["vae"] = vae
-                    temp_pipe["ckpt_name"] = ckpt_name
+                    temp_pipe["ckpt_name"] = y_val
+                    temp_pipe["ckpt_hash"] = ckpt_hash
+                    gc.collect()
 
                 elif y_type == "lora":
-                    parts = y_val.split(":")
-                    lora_name = parts[0]
-                    model_weight = float(parts[1]) if len(parts) > 1 else 1.0
-                    clip_weight = float(parts[2]) if len(parts) > 2 else 1.0
-
-                    if model_weight != 0 or clip_weight != 0:
-                        lora_path = folder_paths.get_full_path("loras", lora_name)
-                        if lora_path is None:
-                            raise ValueError(f"LZXYSampler Error: LoRA not found: {lora_name}")
-
-                        if lora_path in self.loaded_loras:
-                            lora = self.loaded_loras[lora_path]
-                        else:
-                            lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-                            self.loaded_loras[lora_path] = lora
-
-                        model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
-                        temp_pipe["model"] = model
-                        temp_pipe["clip"] = clip
+                    model, clip = apply_lora_value(y_val, model, clip, self.loaded_loras)
+                    temp_pipe["model"] = model
+                    temp_pipe["clip"] = clip
 
                 elif y_type == "positive":
                     if clip is None:
                         raise ValueError("LZXYSampler Error: CLIP is required for positive prompt encoding.")
-                    replaced_text = replace_prompt_text(base_pos_text, y_replace_key, y_val, replace_escape)
-                    tokens_pos = clip.tokenize(replaced_text)
-                    temp_positive = clip.encode_from_tokens_scheduled(tokens_pos)
-                    temp_pos_text = replaced_text
+                    temp_positive, temp_pos_text = encode_replaced_prompt(clip, base_pos_text, y_replace_key, y_val, replace_escape)
 
                 elif y_type == "negative":
                     if clip is None:
                         raise ValueError("LZXYSampler Error: CLIP is required for negative prompt encoding.")
-                    replaced_text = replace_prompt_text(base_neg_text, y_replace_key, y_val, replace_escape)
-                    tokens_neg = clip.tokenize(replaced_text)
-                    temp_negative = clip.encode_from_tokens_scheduled(tokens_neg)
-                    temp_neg_text = replaced_text
+                    temp_negative, temp_neg_text = encode_replaced_prompt(clip, base_neg_text, y_replace_key, y_val, replace_escape)
 
                 elif y_type == "sampler":
                     temp_sampler = y_val
@@ -876,7 +788,11 @@ class LZXYGridOutput:
                 x_pos = label_width + col * img_width + (col + 1) if add_border else label_width + col * img_width
                 y_pos = label_height + row * img_height + (row + 1) if add_border else label_height + row * img_height
 
-                grid_img.paste(img, (x_pos, y_pos))
+                if channels == 4:
+                    # アルファを考慮して貼り付け
+                    grid_img.paste(img, (x_pos, y_pos), img)
+                else:
+                    grid_img.paste(img, (x_pos, y_pos))
 
                 if add_border:
                     draw.rectangle([x_pos, y_pos, x_pos + img_width, y_pos + img_height], outline="black", width=1)
@@ -889,9 +805,11 @@ class LZXYGridOutput:
 
             draw.text((label_font_size // 2, y_pos + img_height // 2 - label_font_size // 2), y_label[:15], fill="black", font=font)
 
-        result_img = torch.from_numpy(np.array(grid_img).astype(np.float32) / 255.0)
-        if result_img.shape[2] == 4:
-            result_img = result_img[:, :, :3]
+        grid_np = np.array(grid_img)
+        # RGBAの場合はRGBに変換してから出力(チャンネルは最後の軸)
+        if grid_np.ndim == 3 and grid_np.shape[-1] == 4:
+            grid_np = grid_np[:, :, :3]
+        result_img = torch.from_numpy(grid_np.astype(np.float32) / 255.0)
         result_img = result_img.unsqueeze(0)
 
         param_text = "\n".join(param_text_lines)

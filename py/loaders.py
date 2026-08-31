@@ -3,29 +3,7 @@
 import folder_paths
 import comfy.sd
 import comfy.utils
-import hashlib
-import os
-
-CHECKPOINT_HASH_CACHE = {}
-
-def get_checkpoint_hash(file_path):
-    if not file_path or not os.path.exists(file_path):
-        return "Unknown"
-    
-    mtime = os.path.getmtime(file_path)
-    if file_path in CHECKPOINT_HASH_CACHE:
-        cached_mtime, cached_hash = CHECKPOINT_HASH_CACHE[file_path]
-        if cached_mtime == mtime:
-            return cached_hash
-            
-    sha256_hash = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        for byte_block in iter(lambda: f.read(4 * 1024 * 1024), b""):
-            sha256_hash.update(byte_block)
-            
-    short_hash = sha256_hash.hexdigest()[:10]
-    CHECKPOINT_HASH_CACHE[file_path] = (mtime, short_hash)
-    return short_hash
+from .utils import get_checkpoint_hash
 
 
 class EZCheckpointLoader:
@@ -211,8 +189,11 @@ class LZLoRAStacker:
                     else:
                         lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
                         self.loaded_loras[lora_path] = lora
-                        
+
                     model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
+                else:
+                    # LoRAが見つからなかった場合は使用済みとして記録しない
+                    used_loras.pop()
         
         # 適用された最新のモデルとCLIPでパイプを更新
         new_pipe = lz_pipe.copy() if lz_pipe else {}

@@ -111,13 +111,11 @@ class LZLogReader:
                 i += 1
                 negative_lines = []
                 while i < len(lines):
-                    if lines[i].strip() == "" or (not lines[i].startswith(" ") and not lines[i].startswith("\t")):
-                        if lines[i].strip() != "":
-                            break
+                    # 次のブロック開始ヘッダが来たら終了
+                    if lines[i].startswith(("Date:", "Model:", "LoRAs:", "Size:", "Seed:", "Positive:", "Negative:")):
+                        break
                     negative_lines.append(lines[i])
                     i += 1
-                    if i < len(lines) and (lines[i].startswith("Date:") or lines[i].startswith("Model:")):
-                        break
                 current_block["negative"] = "\n".join(negative_lines).strip()
                 continue
             

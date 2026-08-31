@@ -29,6 +29,7 @@ This extension provides several quality-of-life nodes that condense common workf
     *   `LZTextPreview`: Display string values directly in the node UI.
     *   `LZStringSanitize`: Remove or replace illegal filename characters.
     *   `LZStringSelect`: Select one string from multiple inputs by index.
+    *   `LZSaveStringToCSV`: Save or append string rows to a CSV file (header written only when the file is created).
 *   **All-In-One Sampling (`LZKSamplerDecode`)**: Combines KSampler and VAEDecode into a single step, pulling directly from the `lz_pipe` routing. It can also accept raw text and perform CLIP encoding dynamically if conditioning isn't explicitly provided.
 *   **XY Plot System (`LZXYPlot` / `LZXYPlotSampler` / `LZXYSampler` / `LZXYGridOutput`)**: Grid comparison system for checkpoints, LoRAs, samplers, schedulers, and prompt variations. Supports replacement keys and automatic grid image generation with labels.
 *   **Comprehensive Image Saving & Logging**:
@@ -46,7 +47,7 @@ This extension provides several quality-of-life nodes that condense common workf
 | **Loaders** | EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader |
 | **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions |
 | **Prompt** | DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZPromptWeight, LZTagEditor |
-| **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString |
+| **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString |
 | **Latent** | PresetEmptyLatentImage |
 | **Pipe** | LZPipePack, LZPipePackXL, LZPipeUnpack, LZPipeInfo, LZPipeMerge |
 | **Sampling** | LZKSamplerDecode |

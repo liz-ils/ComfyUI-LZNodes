@@ -29,6 +29,7 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
     *   `LZTextPreview`: 文字列をノードUI上に直接表示します。
     *   `LZStringSanitize`: ファイル名に使用できない文字を除去・置換します。
     *   `LZStringSelect`: 複数の文字列入力からインデックスで1つを選択します。
+    *   `LZSaveStringToCSV`: 文字列の行をCSVファイルに保存・追記します（ヘッダはファイル新規作成時のみ書き込まれます）。
 *   **オールインワンのサンプリング (`LZKSamplerDecode`)**: KSamplerとVAEDecodeを1つのステップにまとめ、`lz_pipe` から必要なデータを直接引き出します。もしコンディショニングデータが接続されていなくても、入力されたテキストから内部で自動的にCLIPエンコードを行う賢い設計です。
 *   **XY Plotシステム (`LZXYPlot` / `LZXYPlotSampler` / `LZXYSampler` / `LZXYGridOutput`)**: チェックポイント、LoRA、Sampler、Scheduler、プロンプトの変化をグリッドで比較するシステムです。置換キーや自動グリッド画像生成に対応しています。
 *   **画像保存と詳細なログ記録**:
@@ -46,7 +47,7 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
 | **Loaders** | EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader |
 | **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions |
 | **Prompt** | DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZPromptWeight, LZTagEditor |
-| **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString |
+| **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString |
 | **Latent** | PresetEmptyLatentImage |
 | **Pipe** | LZPipePack, LZPipePackXL, LZPipeUnpack, LZPipeInfo, LZPipeMerge |
 | **Sampling** | LZKSamplerDecode |

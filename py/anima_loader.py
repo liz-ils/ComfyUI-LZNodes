@@ -2,29 +2,7 @@
 
 import folder_paths
 import nodes
-import hashlib
-import os
-
-MODEL_HASH_CACHE = {}
-
-def get_model_hash(file_path):
-    if not file_path or not os.path.exists(file_path):
-        return "Unknown"
-    
-    mtime = os.path.getmtime(file_path)
-    if file_path in MODEL_HASH_CACHE:
-        cached_mtime, cached_hash = MODEL_HASH_CACHE[file_path]
-        if cached_mtime == mtime:
-            return cached_hash
-            
-    sha256_hash = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        for byte_block in iter(lambda: f.read(4 * 1024 * 1024), b""):
-            sha256_hash.update(byte_block)
-            
-    short_hash = sha256_hash.hexdigest()[:10]
-    MODEL_HASH_CACHE[file_path] = (mtime, short_hash)
-    return short_hash
+from .utils import get_checkpoint_hash
 
 
 class LZAnimaLoader:
@@ -52,7 +30,7 @@ class LZAnimaLoader:
         vae_path = folder_paths.get_full_path("vae", vae)
         
         # モデルハッシュ計算（diffusion_modelのみ）
-        model_hash = get_model_hash(model_path)
+        model_hash = get_checkpoint_hash(model_path)
         
         # モデル読み込み
         model_loader = nodes.UNETLoader()

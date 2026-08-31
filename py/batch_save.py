@@ -8,6 +8,8 @@ from PIL import Image
 import PIL.PngImagePlugin
 import folder_paths
 
+from .utils import sanitize_filename
+
 
 def parse_labels(text):
     """カンマ区切り・改行区切りの両方に対応したラベル分割"""
@@ -104,30 +106,27 @@ class LZBatchSaveWithLabels:
                 for i in range(len(file_labels), images.shape[0]):
                     file_labels.append(f"{filename_prefix or 'img'}_{i:05d}")
 
-        # prefixからディレクトリ部分を分離
-        if "/" in filename_prefix:
-            subfolder = filename_prefix.rsplit("/", 1)[0]
-        else:
-            subfolder = ""
-
         results = []
         save_details = []
 
         total_images = images.shape[0]
+
+        # add_timestamp=True の場合はファイル名に時刻を付与(再実行時の上書き防止)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") if add_timestamp else None
 
         for (batch_number, image) in enumerate(images):
             i = 255. * image.cpu().numpy()
             img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
 
             file_label = file_labels[batch_number] if batch_number < len(file_labels) else f"{filename_prefix or 'img'}_{batch_number:05d}"
-            file = f"{file_label}_{batch_number:05d}.{image_format}"
+            # ラベル内のファイル名禁則文字をサニタイズ(サブフォルダ区切りの "/" は維持)
+            file_label = "/".join(sanitize_filename(p) for p in file_label.split("/"))
+            if timestamp:
+                file_label = f"{file_label}_{timestamp}"
+            file = f"{file_label}_{batch_number:05d}"
 
             full_output_folder, filename, counter, sub, filename_prefix_clean = \
                 folder_paths.get_save_image_path(file, output_dir, images[0].shape[1], images[0].shape[0])
-
-            if subfolder:
-                full_output_folder = os.path.join(full_output_folder, subfolder)
-                os.makedirs(full_output_folder, exist_ok=True)
 
             img_path = os.path.join(full_output_folder, filename + "." + image_format)
 
@@ -224,7 +223,7 @@ class LZBatchSaveWithLabels:
 
             results.append({
                 "filename": filename + "." + image_format,
-                "subfolder": subfolder,
+                "subfolder": sub,
                 "type": "output"
             })
 
