@@ -14,6 +14,7 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
     *   `LZSimpleCheckpointLoader`: モデルの各コンポーネントを取り出すことに特化した軽量なローダーです。
     *   `LZLoRAStacker`: 最大10個までのLoRAを簡単にスタック可能です。キャッシュ機能により高速な生成をサポートします。
     *   `LZAnimaLoader`: Animaモデル専用のローダーで、拡散モデル、テキストエンコーダー、VAEを個別に読み込みます。
+    *   `LZKrea2Loader`: Krea 2 アーキテクチャ(12B SingleStreamDiT + Qwen3-VL-4B テキストエンコーダー + Qwen-Image VAE)専用のワンノードローダーです。lz_pipe 対応、`weight_dtype` 選択可能、`negative_mode="auto"` で未使用時のネガティブを自動ゼロ化します(Krea 2 Turbo は CFG 1.0 前提のため、公式テンプレートと同一の挙動)。ComfyUI v0.26.0 以降が必要です。
 *   **Anima Artist Mixer**:
     *   `LZAnimaArtistNode`: 統合ノード。画師チェーンの分割・エンコードと cross-attention 注入を1ステップで実行。`(MODEL, CONDITIONING, STRING)` を出力し、`positive_text` を直接パイプシステムに接続可能。
     *   `LZAnimaArtistPack` / `LZAnimaArtistCrossAttn`: 分割・エンコードと cross-attn 注入を分離したノード（上級者向け）。`LZAnimaArtistCrossAttn` も `positive_text` (STRING) を出力。
@@ -31,7 +32,7 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
     *   `LZStringSelect`: 複数の文字列入力からインデックスで1つを選択します。
     *   `LZSaveStringToCSV`: 文字列の行をCSVファイルに保存・追記します（ヘッダはファイル新規作成時のみ書き込まれます）。
 *   **オールインワンのサンプリング (`LZKSamplerDecode`)**: KSamplerとVAEDecodeを1つのステップにまとめ、`lz_pipe` から必要なデータを直接引き出します。もしコンディショニングデータが接続されていなくても、入力されたテキストから内部で自動的にCLIPエンコードを行う賢い設計です。
-*   **XY Plotシステム (`LZXYPlot` / `LZXYPlotSampler` / `LZXYSampler` / `LZXYGridOutput`)**: チェックポイント、LoRA、Sampler、Scheduler、プロンプトの変化をグリッドで比較するシステムです。置換キーや自動グリッド画像生成に対応しています。
+*   **XY Plotシステム (`LZXYPlot` / `LZXYPlotSampler` / `LZXYSampler` / `LZXYGridOutput`)**: チェックポイント、拡散モデル単体(Krea 2 / Anima / Flux などのDiT)、LoRA、Sampler、Scheduler、プロンプトの変化をグリッドで比較するシステムです。置換キーや自動グリッド画像生成に対応しています。
 *   **画像保存と詳細なログ記録**:
     *   `LZSaveImageAndLog`: 生成された画像（PNG/WEBP/JPG）の保存と同時に、シード値、ステップ数、さらにはチェックポイントのハッシュ値やプロンプトの全文まで、考えうる限りの詳細なメタデータを `.txt` ログファイルとして出力します。もちろん、PNGの不可視メタデータ領域（PNGInfo）への書き込みにも対応しています。
     *   `LZBatchSaveWithLabels`: XYラベルをファイル名やメタデータに埋め込んで一括保存し、自動的にバッチログも出力します。
@@ -44,7 +45,7 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
 
 | カテゴリ | ノード名 |
 |---|---|
-| **Loaders** | EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader |
+| **Loaders** | EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader, LZKrea2Loader |
 | **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions |
 | **Prompt** | DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZPromptWeight, LZTagEditor |
 | **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString |
@@ -55,6 +56,31 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
 | **IO** | LZSaveImageAndLog, LZBatchSaveWithLabels |
 | **Log** | LZAppendLogToCSV, LZLogReader |
 | **Merge** | LZMergeRecipeRandom, LZMergeRecipeManual, LZMergeRecipeRandomAdvanced |
+
+## Krea 2 クイックガイド
+
+`LZKrea2Loader` が [Krea 2](https://huggingface.co/krea/Krea-2-Turbo) アーキテクチャにネイティブ対応しています(要 **ComfyUI v0.26.0 以降**)。
+
+**モデルファイル**([Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2) の ComfyUI 再パッケージ版を推奨):
+
+| 種類 | ファイル例 | 配置先 |
+|---|---|---|
+| 拡散モデル(DiT) | `krea2_turbo_fp8_scaled.safetensors` | `models/diffusion_models` |
+| テキストエンコーダー | `qwen3vl_4b_fp8_scaled.safetensors` | `models/text_encoders` |
+| VAE | `qwen_image_vae.safetensors` | `models/vae` |
+| スタイルLoRA(任意) | `krea2_darkbrush.safetensors` など | `models/loras` |
+
+**推奨設定**(公式 [krea-2](https://github.com/krea-ai/krea-2) リポジトリより):
+
+| バリアント | ステップ数 | CFG | Sampler | Scheduler |
+|---|---|---|---|---|
+| Krea 2 **Turbo** | 8 | 1.0 | euler | simple |
+| Krea 2 **Raw** | 52 | 3.5 | euler | simple |
+
+*   Krea 2 Turbo は蒸留モデルのため、CFG 1.0 ではネガティブプロンプトが機能しません。`negative_mode="auto"`(デフォルト)は positive をゼロ化したものをネガティブとして使用します(公式テンプレートの `ConditioningZeroOut` と同一挙動で、無駄なテキストエンコードを省略)。
+*   サイズは 1K〜2K に対応。`PresetEmptyLatentImage`(16ch モード)か、本体の `ResolutionSelector` ノードを `width`/`height` 入力に接続して使用してください。
+*   Krea 2 で XY Plot を使う場合は `diffusion_model` 軸を使用してください(`checkpoint` 軸はフルチェックポイント専用です)。
+*   Turbo でネガティブプロンプトを使いたい場合は、[ComfyUI-krea2-negpip](https://github.com/blue-pen5805/ComfyUI-krea2-negpip) などのコミュニティノードと併用できます。
 
 ## インストール方法
 

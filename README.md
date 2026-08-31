@@ -14,6 +14,7 @@ This extension provides several quality-of-life nodes that condense common workf
     *   `LZSimpleCheckpointLoader`: A lightweight loader strictly for extracting model components.
     *   `LZLoRAStacker`: Easily stack up to 10 LoRAs with built-in caching for faster generation.
     *   `LZAnimaLoader`: Specialized loader for Anima models that loads the diffusion model, text encoder, and VAE separately.
+    *   `LZKrea2Loader`: One-node loader for the Krea 2 architecture (12B SingleStreamDiT + Qwen3-VL-4B text encoder + Qwen-Image VAE). Pipe-ready with `weight_dtype` selection, and `negative_mode="auto"` zero-outs the negative when unused (Krea 2 Turbo runs at CFG 1.0, matching the official template). Requires ComfyUI v0.26.0+.
 *   **Anima Artist Mixer**:
     *   `LZAnimaArtistNode`: Combined node that splits/encodes artist chains and applies cross-attention injection in one step. Outputs `(MODEL, CONDITIONING, STRING)` with the base prompt text as `positive_text` for direct connection to the pipe system.
     *   `LZAnimaArtistPack` / `LZAnimaArtistCrossAttn`: Separate split-encode and cross-attn injection nodes for advanced workflows. `LZAnimaArtistCrossAttn` also outputs `positive_text` (STRING).
@@ -31,7 +32,7 @@ This extension provides several quality-of-life nodes that condense common workf
     *   `LZStringSelect`: Select one string from multiple inputs by index.
     *   `LZSaveStringToCSV`: Save or append string rows to a CSV file (header written only when the file is created).
 *   **All-In-One Sampling (`LZKSamplerDecode`)**: Combines KSampler and VAEDecode into a single step, pulling directly from the `lz_pipe` routing. It can also accept raw text and perform CLIP encoding dynamically if conditioning isn't explicitly provided.
-*   **XY Plot System (`LZXYPlot` / `LZXYPlotSampler` / `LZXYSampler` / `LZXYGridOutput`)**: Grid comparison system for checkpoints, LoRAs, samplers, schedulers, and prompt variations. Supports replacement keys and automatic grid image generation with labels.
+*   **XY Plot System (`LZXYPlot` / `LZXYPlotSampler` / `LZXYSampler` / `LZXYGridOutput`)**: Grid comparison system for checkpoints, diffusion models (DiT-only, e.g. Krea 2 / Anima / Flux), LoRAs, samplers, schedulers, and prompt variations. Supports replacement keys and automatic grid image generation with labels.
 *   **Comprehensive Image Saving & Logging**:
     *   `LZSaveImageAndLog`: Saves generated images (PNG/WEBP/JPG) alongside a highly detailed `.txt` log file capturing everything from Seed and Steps to Checkpoint Hash and full Prompt text. It also injects this data into PNG metadata invisibly.
     *   `LZBatchSaveWithLabels`: Batch-save images with XY labels embedded in filenames and metadata, plus automatic batch log output.
@@ -44,7 +45,7 @@ This extension provides several quality-of-life nodes that condense common workf
 
 | Category | Nodes |
 |---|---|
-| **Loaders** | EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader |
+| **Loaders** | EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader, LZKrea2Loader |
 | **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions |
 | **Prompt** | DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZPromptWeight, LZTagEditor |
 | **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString |
@@ -55,6 +56,31 @@ This extension provides several quality-of-life nodes that condense common workf
 | **IO** | LZSaveImageAndLog, LZBatchSaveWithLabels |
 | **Log** | LZAppendLogToCSV, LZLogReader |
 | **Merge** | LZMergeRecipeRandom, LZMergeRecipeManual, LZMergeRecipeRandomAdvanced |
+
+## Krea 2 Quick Guide
+
+`LZKrea2Loader` supports the [Krea 2](https://huggingface.co/krea/Krea-2-Turbo) architecture natively (requires **ComfyUI v0.26.0+**).
+
+**Model files** (download the ComfyUI-repackaged versions from [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2)):
+
+| Type | File example | Folder |
+|---|---|---|
+| Diffusion model (DiT) | `krea2_turbo_fp8_scaled.safetensors` | `models/diffusion_models` |
+| Text encoder | `qwen3vl_4b_fp8_scaled.safetensors` | `models/text_encoders` |
+| VAE | `qwen_image_vae.safetensors` | `models/vae` |
+| Style LoRAs (optional) | `krea2_darkbrush.safetensors` etc. | `models/loras` |
+
+**Recommended settings** (per the official [krea-2](https://github.com/krea-ai/krea-2) repository):
+
+| Variant | Steps | CFG | Sampler | Scheduler |
+|---|---|---|---|---|
+| Krea 2 **Turbo** | 8 | 1.0 | euler | simple |
+| Krea 2 **Raw** | 52 | 3.5 | euler | simple |
+
+*   Krea 2 Turbo is guidance-distilled: negative prompts have no effect at CFG 1.0. `negative_mode="auto"` (default) zero-outs the positive as the negative, matching the official template's `ConditioningZeroOut` pattern and skipping wasted text-encoder work.
+*   Sizes from 1K to 2K are supported. Use `PresetEmptyLatentImage` (16ch mode) or the built-in `ResolutionSelector` node connected to its `width`/`height` inputs.
+*   For XY plots with Krea 2, use the `diffusion_model` axis (the `checkpoint` axis only loads full checkpoints).
+*   For negative prompts on Turbo, community nodes such as [ComfyUI-krea2-negpip](https://github.com/blue-pen5805/ComfyUI-krea2-negpip) can be used alongside this pack.
 
 ## Installation
 

@@ -47,3 +47,31 @@ def sanitize_filename(text, replace_with="_"):
     if text.endswith("."):
         text = text[:-1]
     return text
+
+
+def zero_out_conditioning(conditioning):
+    """ComfyUI の ConditioningZeroOut と同等の処理。
+
+    Krea2 Turbo 等の CFG=1.0 前提モデルで、ネガティブを無効化するために使用する。
+    ComfyUI 本体の ConditioningZeroOut ノードが利用可能ならそれを使う。
+    """
+    import torch
+
+    zero_node = None
+    try:
+        import nodes as comfy_nodes
+        zero_node = getattr(comfy_nodes, "NODE_CLASS_MAPPINGS", {}).get("ConditioningZeroOut")
+    except Exception:
+        zero_node = None
+
+    if zero_node is not None:
+        return zero_node().zero_out(conditioning)[0]
+
+    # フォールバック実装(ConditioningZeroOut と同一の挙動)
+    out = []
+    for t in conditioning:
+        d = t[1].copy() if len(t) > 1 and isinstance(t[1], dict) else {}
+        if "pooled_output" in d:
+            d["pooled_output"] = torch.zeros_like(d["pooled_output"])
+        out.append([torch.zeros_like(t[0]), d])
+    return out

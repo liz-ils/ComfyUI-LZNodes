@@ -52,6 +52,18 @@ def load_checkpoint_for_value(value):
     return model, clip, vae, ckpt_hash
 
 
+def load_diffusion_model_for_value(value):
+    """XY軸のdiffusion_model値からDiTを読み込む(CLIP/VAE/コンディショニングは現状維持)。"""
+    model_path = folder_paths.get_full_path("diffusion_models", value)
+    if model_path is None:
+        raise ValueError(f"LZ XY Error: Diffusion model not found: {value}")
+
+    model_loader = nodes.UNETLoader()
+    model = model_loader.load_unet(value, "default")[0]
+    ckpt_hash = get_checkpoint_hash(model_path)
+    return model, ckpt_hash
+
+
 def apply_lora_value(value, model, clip, loaded_loras):
     """XY軸のlora値 ("name:model_weight:clip_weight") を適用する。"""
     parts = value.split(":")
@@ -84,10 +96,13 @@ def encode_replaced_prompt(clip, base_text, replace_key, value, escape):
     return cond, replaced_text
 
 
+XY_PARAM_OPTIONS = ["none", "checkpoint", "diffusion_model", "lora", "sampler", "scheduler", "positive", "negative"]
+
+
 class LZXYPlot:
     @classmethod
     def INPUT_TYPES(s):
-        param_options = ["none", "checkpoint", "lora", "sampler", "scheduler", "positive", "negative"]
+        param_options = XY_PARAM_OPTIONS
         return {
             "required": {
                 "x_type": (param_options, {"default": "none"}),
@@ -159,7 +174,7 @@ class LZXYPlotSampler:
 
     @classmethod
     def INPUT_TYPES(s):
-        param_options = ["none", "checkpoint", "lora", "sampler", "scheduler", "positive", "negative"]
+        param_options = XY_PARAM_OPTIONS
         return {
             "required": {
                 "x_type": (param_options, {"default": "none"}),
@@ -290,6 +305,10 @@ class LZXYPlotSampler:
                     model, clip, vae, ckpt_hash = load_checkpoint_for_value(x_val)
                     ckpt_name = x_val
                     gc.collect()
+                elif x_type == "diffusion_model":
+                    model, ckpt_hash = load_diffusion_model_for_value(x_val)
+                    ckpt_name = x_val
+                    gc.collect()
                 elif x_type == "lora":
                     model, clip = apply_lora_value(x_val, model, clip, self.loaded_loras)
                 elif x_type == "positive":
@@ -308,6 +327,10 @@ class LZXYPlotSampler:
                 # --- Y軸の値を適用 ---
                 if y_type == "checkpoint":
                     model, clip, vae, ckpt_hash = load_checkpoint_for_value(y_val)
+                    ckpt_name = y_val
+                    gc.collect()
+                elif y_type == "diffusion_model":
+                    model, ckpt_hash = load_diffusion_model_for_value(y_val)
                     ckpt_name = y_val
                     gc.collect()
                 elif y_type == "lora":
@@ -380,7 +403,7 @@ class LZXYSampler:
 
     @classmethod
     def INPUT_TYPES(s):
-        param_options = ["none", "checkpoint", "lora", "sampler", "scheduler", "positive", "negative"]
+        param_options = XY_PARAM_OPTIONS
         inputs = {
             "required": {
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
@@ -575,6 +598,13 @@ class LZXYSampler:
                     temp_pipe["ckpt_hash"] = ckpt_hash
                     gc.collect()
 
+                elif x_type == "diffusion_model":
+                    model, ckpt_hash = load_diffusion_model_for_value(x_val)
+                    temp_pipe["model"] = model
+                    temp_pipe["ckpt_name"] = x_val
+                    temp_pipe["ckpt_hash"] = ckpt_hash
+                    gc.collect()
+
                 elif x_type == "lora":
                     model, clip = apply_lora_value(x_val, model, clip, self.loaded_loras)
                     temp_pipe["model"] = model
@@ -601,6 +631,13 @@ class LZXYSampler:
                     temp_pipe["model"] = model
                     temp_pipe["clip"] = clip
                     temp_pipe["vae"] = vae
+                    temp_pipe["ckpt_name"] = y_val
+                    temp_pipe["ckpt_hash"] = ckpt_hash
+                    gc.collect()
+
+                elif y_type == "diffusion_model":
+                    model, ckpt_hash = load_diffusion_model_for_value(y_val)
+                    temp_pipe["model"] = model
                     temp_pipe["ckpt_name"] = y_val
                     temp_pipe["ckpt_hash"] = ckpt_hash
                     gc.collect()

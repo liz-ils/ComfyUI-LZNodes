@@ -3,6 +3,8 @@
 import comfy.samplers
 import nodes
 
+from .utils import zero_out_conditioning
+
 class LZKSamplerDecode:
     @classmethod
     def INPUT_TYPES(s):
@@ -14,7 +16,15 @@ class LZKSamplerDecode:
                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS, ),
                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS, ),
                 "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                "model_preset": (["Auto/SDXL", "Anima"], {"default": "Auto/SDXL"}),
+                "model_preset": (["Auto/SDXL", "Anima", "Krea2 (Turbo)", "Krea2 (Raw)"], {
+                    "default": "Auto/SDXL",
+                    "tooltip": (
+                        "Krea2 (Turbo): recommended 8 steps / CFG 1.0 / euler / simple. "
+                        "If no negative is connected, the positive is zeroed-out as negative "
+                        "(official template behaviour; CFG 1.0 ignores negatives).\n"
+                        "Krea2 (Raw): recommended 52 steps / CFG 3.5. A real negative is required."
+                    )
+                }),
             },
             "optional": {
                 "lz_pipe": ("LZ_PIPE",),
@@ -60,6 +70,10 @@ class LZKSamplerDecode:
                 raise ValueError("LZ KSampler Error: 'negative' (CONDITIONING) is missing, and 'clip' is required to encode 'negative_text'.")
             tokens_neg = clip.tokenize(neg_text)
             negative = clip.encode_from_tokens_scheduled(tokens_neg)
+
+        # Krea2 (Turbo): ネガティブが無い場合は positive をゼロ化して代用 (公式テンプレート準拠)
+        if negative is None and positive is not None and model_preset == "Krea2 (Turbo)":
+            negative = zero_out_conditioning(positive)
 
         # 実行に必要なデータが揃っているか最終チェック
         if None in (model, positive, negative, latent_image, vae):

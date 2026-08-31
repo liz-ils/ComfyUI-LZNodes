@@ -36,7 +36,7 @@ class LZPipePack:
 class LZPipePackXL:
     @classmethod
     def INPUT_TYPES(s):
-        param_options = ["none", "checkpoint", "lora", "sampler", "scheduler", "positive", "negative"]
+        param_options = ["none", "checkpoint", "diffusion_model", "lora", "sampler", "scheduler", "positive", "negative"]
         return {
             "required": {},
             "optional": {

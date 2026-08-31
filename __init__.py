@@ -3,6 +3,7 @@ from .py.log_csv import LZAppendLogToCSV
 from .py.prompts import DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZCLIPTextEncode
 from .py.loaders import EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZLoRALoaderModelOnly
 from .py.anima_loader import LZAnimaLoader
+from .py.krea2_loader import LZKrea2Loader
 from .py.anima_artist_mixer import LZAnimaArtistPack, LZAnimaArtistOptions, LZAnimaArtistCrossAttn, LZAnimaArtistNode
 from .py.latent import PresetEmptyLatentImage
 from .py.pipe import LZPipePack, LZPipePackXL, LZPipeUnpack
@@ -41,6 +42,7 @@ NODE_CLASS_MAPPINGS = {
     "LZSaveImageAndLog": LZSaveImageAndLog,
     "LZSimpleCheckpointLoader": LZSimpleCheckpointLoader,
     "LZAnimaLoader": LZAnimaLoader,
+    "LZKrea2Loader": LZKrea2Loader,
     "LZAnimaArtistPack": LZAnimaArtistPack,
     "LZAnimaArtistOptions": LZAnimaArtistOptions,
     "LZAnimaArtistCrossAttn": LZAnimaArtistCrossAttn,
@@ -86,6 +88,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZSaveImageAndLog": "LZ Save Image & Log",
     "LZSimpleCheckpointLoader": "LZ Simple Checkpoint Loader",
     "LZAnimaLoader": "LZ Anima Loader",
+    "LZKrea2Loader": "LZ Krea2 Loader",
     "LZAnimaArtistPack": "LZ Anima Artist Pack (Split + Encode)",
     "LZAnimaArtistOptions": "LZ Anima Artist Options (Advanced)",
     "LZAnimaArtistCrossAttn": "LZ Anima Artist Cross-Attn (v2)",
