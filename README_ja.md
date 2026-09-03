@@ -12,13 +12,14 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
 *   **スマートなローダー群**:
     *   `EZCheckpointLoader`: チェックポイントの読み込みと、ポジティブ/ネガティブプロンプトのエンコードを1つのノードで同時に行います。
     *   `LZSimpleCheckpointLoader`: モデルの各コンポーネントを取り出すことに特化した軽量なローダーです。
-    *   `LZLoRAStacker`: 最大10個までのLoRAを簡単にスタック可能です。キャッシュ機能により高速な生成をサポートします。
+    *   `LZLoRAStacker`: 最大10個までのLoRAを簡単にスタック可能です。キャッシュ機能により高速な生成をサポートします。`lora_model` / `lora_weight`(カンマ連結のモデル名/重み、`lz_pipe` にも格納)を出力します。
     *   `LZAnimaLoader`: Animaモデル専用のローダーで、拡散モデル、テキストエンコーダー、VAEを個別に読み込みます。
     *   `LZKrea2Loader`: Krea 2 アーキテクチャ(12B SingleStreamDiT + Qwen3-VL-4B テキストエンコーダー + Qwen-Image VAE)専用のワンノードローダーです。lz_pipe 対応、`weight_dtype` 選択可能、`negative_mode="auto"` で未使用時のネガティブを自動ゼロ化します(Krea 2 Turbo は CFG 1.0 前提のため、公式テンプレートと同一の挙動)。ComfyUI v0.26.0 以降が必要です。
 *   **Anima Artist Mixer**:
     *   `LZAnimaArtistNode`: 統合ノード。画師チェーンの分割・エンコードと cross-attention 注入を1ステップで実行。`(MODEL, CONDITIONING, STRING)` を出力し、`positive_text` を直接パイプシステムに接続可能。
     *   `LZAnimaArtistPack` / `LZAnimaArtistCrossAttn`: 分割・エンコードと cross-attn 注入を分離したノード（上級者向け）。`LZAnimaArtistCrossAttn` も `positive_text` (STRING) を出力。
     *   `LZAnimaArtistOptions`: ブロック範囲、fusionモード、EMA平滑化、低ランク注入、static capture、anchor Q を細かく設定するための高度なオプションノード。
+    *   `LZArtistChainText`: `artist_chain` 入力向けの緑色ノード。改行区切りのアーティスト一覧をカンマ連結した `artist_tag` を出力します(元テキストと `lz_pipe` もそのまま出力)。
 *   **プロンプト管理**:
     *   `AdvancedPositivePrompt` / `AdvancedNegativePrompt`: 基本のプロンプト、アーティストタグ、クオリティタグなどを綺麗に分けて入力できます。内部で自動的に結合＆エンコードされます。
     *   `DualCLIPTextEncode`: ポジティブプロンプトとネガティブプロンプトを横並びで同時にエンコードするノードです。
@@ -46,7 +47,7 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
 | カテゴリ | ノード名 |
 |---|---|
 | **Loaders** | EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader, LZKrea2Loader |
-| **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions |
+| **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions, LZArtistChainText |
 | **Prompt** | DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZPromptWeight, LZTagEditor |
 | **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString |
 | **Latent** | PresetEmptyLatentImage |

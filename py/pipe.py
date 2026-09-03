@@ -21,6 +21,8 @@ class LZPipePack:
                 "ckpt_hash": ("STRING", {"forceInput": True}),
                 "lora_name": ("STRING", {"forceInput": True}),
                 "lora_strength": ("STRING", {"forceInput": True}),
+                "lora_model": ("STRING", {"forceInput": True}),
+                "lora_weight": ("STRING", {"forceInput": True}),
             }
         }
 
@@ -54,6 +56,8 @@ class LZPipePackXL:
                 "ckpt_hash": ("STRING", {"forceInput": True}),
                 "lora_name": ("STRING", {"forceInput": True}),
                 "lora_strength": ("STRING", {"forceInput": True}),
+                "lora_model": ("STRING", {"forceInput": True}),
+                "lora_weight": ("STRING", {"forceInput": True}),
                 "x_type": (param_options, {"default": "none"}),
                 "x_values": ("STRING", {"multiline": True, "default": ""}),
                 "y_type": (param_options, {"default": "none"}),
@@ -112,8 +116,8 @@ class LZPipeUnpack:
             "required": { "lz_pipe": ("LZ_PIPE",), }
         }
 
-    RETURN_TYPES = ("MODEL", "CLIP", "VAE", "CONDITIONING", "CONDITIONING", "LATENT", "STRING", "STRING", "INT", "INT", "STRING", "STRING", "STRING", "STRING")
-    RETURN_NAMES = ("MODEL", "CLIP", "VAE", "positive", "negative", "LATENT", "positive_text", "negative_text", "width", "height", "ckpt_name", "ckpt_hash", "lora_name", "lora_strength")
+    RETURN_TYPES = ("MODEL", "CLIP", "VAE", "CONDITIONING", "CONDITIONING", "LATENT", "STRING", "STRING", "INT", "INT", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING")
+    RETURN_NAMES = ("MODEL", "CLIP", "VAE", "positive", "negative", "LATENT", "positive_text", "negative_text", "width", "height", "ckpt_name", "ckpt_hash", "lora_name", "lora_strength", "lora_model", "lora_weight")
     FUNCTION = "unpack"
     CATEGORY = "MyCustomNodes/Pipe"
 
@@ -124,5 +128,7 @@ class LZPipeUnpack:
             lz_pipe.get("positive_text", ""), lz_pipe.get("negative_text", ""),
             lz_pipe.get("width", 0), lz_pipe.get("height", 0),
             lz_pipe.get("ckpt_name", "Unknown"), lz_pipe.get("ckpt_hash", "Unknown"),
-            lz_pipe.get("lora_name", ""), lz_pipe.get("lora_strength", "")
+            lz_pipe.get("lora_name", ""), lz_pipe.get("lora_strength", ""),
+            lz_pipe.get("lora_model", lz_pipe.get("lora_name", "")),
+            lz_pipe.get("lora_weight", lz_pipe.get("lora_strength", ""))
         )

@@ -12,13 +12,14 @@ This extension provides several quality-of-life nodes that condense common workf
 *   **Smart Loaders**:
     *   `EZCheckpointLoader`: Loads a checkpoint and automatically encodes positive/negative prompts in a single node.
     *   `LZSimpleCheckpointLoader`: A lightweight loader strictly for extracting model components.
-    *   `LZLoRAStacker`: Easily stack up to 10 LoRAs with built-in caching for faster generation.
+    *   `LZLoRAStacker`: Easily stack up to 10 LoRAs with built-in caching for faster generation. Outputs `lora_model` / `lora_weight` (comma-joined names/weights, also carried in `lz_pipe`).
     *   `LZAnimaLoader`: Specialized loader for Anima models that loads the diffusion model, text encoder, and VAE separately.
     *   `LZKrea2Loader`: One-node loader for the Krea 2 architecture (12B SingleStreamDiT + Qwen3-VL-4B text encoder + Qwen-Image VAE). Pipe-ready with `weight_dtype` selection, and `negative_mode="auto"` zero-outs the negative when unused (Krea 2 Turbo runs at CFG 1.0, matching the official template). Requires ComfyUI v0.26.0+.
 *   **Anima Artist Mixer**:
     *   `LZAnimaArtistNode`: Combined node that splits/encodes artist chains and applies cross-attention injection in one step. Outputs `(MODEL, CONDITIONING, STRING)` with the base prompt text as `positive_text` for direct connection to the pipe system.
     *   `LZAnimaArtistPack` / `LZAnimaArtistCrossAttn`: Separate split-encode and cross-attn injection nodes for advanced workflows. `LZAnimaArtistCrossAttn` also outputs `positive_text` (STRING).
     *   `LZAnimaArtistOptions`: Advanced options for fine-tuning block ranges, fusion modes, EMA smoothing, low-rank injection, static capture, and anchor Q.
+    *   `LZArtistChainText`: Green-colored helper node for the `artist_chain` input. Converts a line-separated artist list into a comma-joined `artist_tag` (and also outputs the original text and the `lz_pipe` unchanged).
 *   **Prompt Management**:
     *   `AdvancedPositivePrompt` / `AdvancedNegativePrompt`: Cleanly separate base prompts, artist tags, and quality tags. Automatically concatenates and encodes them.
     *   `DualCLIPTextEncode`: Encodes both positive and negative prompts simultaneously.
@@ -46,7 +47,7 @@ This extension provides several quality-of-life nodes that condense common workf
 | Category | Nodes |
 |---|---|
 | **Loaders** | EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader, LZKrea2Loader |
-| **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions |
+| **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions, LZArtistChainText |
 | **Prompt** | DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZPromptWeight, LZTagEditor |
 | **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString |
 | **Latent** | PresetEmptyLatentImage |

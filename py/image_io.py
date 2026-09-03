@@ -39,6 +39,8 @@ class LZSaveImageAndLog:
                 "scheduler": ("STRING", {"forceInput": True}),
                 "ckpt_name": ("STRING", {"forceInput": True}),
                 "ckpt_hash": ("STRING", {"forceInput": True}),
+                "lora_model": ("STRING", {"forceInput": True}),
+                "lora_weight": ("STRING", {"forceInput": True}),
             },
             "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
         }
@@ -77,8 +79,9 @@ class LZSaveImageAndLog:
         scheduler = kwargs.get("scheduler", lz_pipe.get("scheduler", "Unknown"))
         ckpt_name = kwargs.get("ckpt_name", lz_pipe.get("ckpt_name", "Unknown"))
         ckpt_hash = kwargs.get("ckpt_hash", lz_pipe.get("ckpt_hash", "Unknown"))
-        lora_name = lz_pipe.get("lora_name", "")
-        lora_strength = lz_pipe.get("lora_strength", "")
+        # lora_model/lora_weight を優先し、無ければ従来の lora_name/lora_strength にフォールバック
+        lora_model = kwargs.get("lora_model") or lz_pipe.get("lora_model") or lz_pipe.get("lora_name") or ""
+        lora_weight = kwargs.get("lora_weight") or lz_pipe.get("lora_weight") or lz_pipe.get("lora_strength") or ""
 
         log_text = ""
         if add_timestamp:
@@ -87,10 +90,10 @@ class LZSaveImageAndLog:
         if ckpt_name != "Unknown":
             log_text += f"Model: {ckpt_name} (Hash: {ckpt_hash})\n"
 
-        if lora_name:
-            log_text += f"LoRAs: {lora_name}\n"
-            if lora_strength:
-                log_text += f"LoRA strengths: {lora_strength}\n"
+        if lora_model:
+            log_text += f"LoRAs: {lora_model}\n"
+            if lora_weight:
+                log_text += f"LoRA strengths: {lora_weight}\n"
             
         log_text += f"Size: {width} x {height}\n"
         if seed != "Unknown":

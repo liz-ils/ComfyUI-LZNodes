@@ -108,14 +108,14 @@ class LZLoRALoaderModelOnly:
             }
         }
 
-    RETURN_TYPES = ("MODEL", "STRING", "STRING")
-    RETURN_NAMES = ("MODEL", "lora_name", "lora_strength")
+    RETURN_TYPES = ("MODEL", "STRING", "STRING", "STRING", "STRING")
+    RETURN_NAMES = ("MODEL", "lora_name", "lora_strength", "lora_model", "lora_weight")
     FUNCTION = "load_lora"
     CATEGORY = "MyCustomNodes/Loaders"
 
     def load_lora(self, model, lora_name, strength_model):
         if lora_name == "None" or strength_model == 0:
-            return (model, "None", "0.0")
+            return (model, "None", "0.0", "None", "0.0")
 
         lora_path = folder_paths.get_full_path("loras", lora_name)
         if lora_path is not None:
@@ -126,7 +126,7 @@ class LZLoRALoaderModelOnly:
                 self.loaded_loras[lora_path] = lora
             model, _ = comfy.sd.load_lora_for_models(model, None, lora, strength_model, 0)
 
-        return (model, lora_name, str(strength_model))
+        return (model, lora_name, str(strength_model), lora_name, str(strength_model))
 
 
 class LZLoRAStacker:
@@ -152,8 +152,8 @@ class LZLoRAStacker:
             
         return inputs
 
-    RETURN_TYPES = ("MODEL", "CLIP", "LZ_PIPE")
-    RETURN_NAMES = ("MODEL", "CLIP", "lz_pipe")
+    RETURN_TYPES = ("MODEL", "CLIP", "LZ_PIPE", "STRING", "STRING")
+    RETURN_NAMES = ("MODEL", "CLIP", "lz_pipe", "lora_model", "lora_weight")
     FUNCTION = "load_loras"
     CATEGORY = "MyCustomNodes/Loaders"
 
@@ -201,7 +201,11 @@ class LZLoRAStacker:
         new_pipe["clip"] = clip
 
         if used_loras:
-            new_pipe["lora_name"] = ", ".join([n for n, _ in used_loras])
-            new_pipe["lora_strength"] = ", ".join([str(m) for _, m in used_loras])
-        
-        return (model, clip, new_pipe)
+            model_names = ", ".join([n for n, _ in used_loras])
+            model_weights = ", ".join([str(m) for _, m in used_loras])
+            new_pipe["lora_name"] = model_names
+            new_pipe["lora_strength"] = model_weights
+            new_pipe["lora_model"] = model_names
+            new_pipe["lora_weight"] = model_weights
+
+        return (model, clip, new_pipe, new_pipe.get("lora_model", ""), new_pipe.get("lora_weight", ""))
