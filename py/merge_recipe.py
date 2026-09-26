@@ -4,7 +4,10 @@ class LZMergeRecipeRandom:
     @classmethod
     def INPUT_TYPES(s):
         return {
-            "required": {}
+            "required": {},
+            "optional": {
+                "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "control_after_generate": True}),
+            }
         }
 
     RETURN_TYPES = ("STRING",)
@@ -12,9 +15,17 @@ class LZMergeRecipeRandom:
     FUNCTION = "generate"
     CATEGORY = "MyCustomNodes/Merge"
 
-    def generate(self):
+    @classmethod
+    def IS_CHANGED(s, **kwargs):
+        seed = kwargs.get("seed", -1)
+        if seed is None or int(seed) < 0:
+            return float("nan")
+        return int(seed)
+
+    def generate(self, seed=-1):
+        rng = random.Random(int(seed)) if seed is not None and int(seed) >= 0 else random
         # Generate 19 random values between 0.1-1.0 in 0.1 increments
-        values = [round(random.uniform(0.1, 1.0) / 0.1) * 0.1 for _ in range(19)]
+        values = [round(rng.uniform(0.1, 1.0) / 0.1) * 0.1 for _ in range(19)]
         # Format to ensure proper decimal representation
         formatted_values = [f"{v:.1f}" for v in values]
         recipe = ",".join(formatted_values)
@@ -77,15 +88,14 @@ class LZMergeRecipeManual:
             values.append(rounded_value)
         
         # Format values to match step precision
-        if step >= 0.1:
+        # 0.25刻みは小数2桁が必要(0.25/0.75)。0.5/1.0/0.1は1桁でよい
+        if step in (0.25, 0.05, 0.01):
+            formatted_values = [f"{v:.2f}" for v in values]
+        elif step >= 0.1:
             formatted_values = [f"{v:.1f}" for v in values]
-        elif step >= 0.05:
-            formatted_values = [f"{v:.2f}" for v in values]
-        elif step >= 0.01:
-            formatted_values = [f"{v:.2f}" for v in values]
         else:
             formatted_values = [str(v) for v in values]
-            
+
         recipe = ",".join(formatted_values)
         return (recipe,)
 
@@ -98,6 +108,9 @@ class LZMergeRecipeRandomAdvanced:
                 "min_value": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "max_value": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "step_size": ("FLOAT", {"default": 0.1, "min": 0.01, "max": 1.0, "step": 0.01}),
+            },
+            "optional": {
+                "seed": ("INT", {"default": -1, "min": -1, "max": 0xffffffffffffffff, "control_after_generate": True}),
             }
         }
 
@@ -106,27 +119,33 @@ class LZMergeRecipeRandomAdvanced:
     FUNCTION = "generate"
     CATEGORY = "MyCustomNodes/Merge"
 
-    def generate(self, min_value=0.0, max_value=1.0, step_size=0.1):
+    @classmethod
+    def IS_CHANGED(s, **kwargs):
+        seed = kwargs.get("seed", -1)
+        if seed is None or int(seed) < 0:
+            return float("nan")
+        return (int(seed), kwargs.get("min_value"), kwargs.get("max_value"), kwargs.get("step_size"))
+
+    def generate(self, min_value=0.0, max_value=1.0, step_size=0.1, seed=-1):
         # Validate inputs
         if min_value >= max_value:
-            min_value, max_value = 0.0, 1.0
+            raise ValueError("LZMergeRecipeRandomAdvanced Error: min_value must be smaller than max_value.")
         if step_size <= 0:
             step_size = 0.1
-            
-        # Calculate possible values within range
-        num_steps = int((max_value - min_value) / step_size) + 1
+
+        # Calculate possible values within range (浮動小数誤差で終端が落ちないよう丸める)
+        num_steps = int(round((max_value - min_value) / step_size)) + 1
         possible_values = [min_value + i * step_size for i in range(num_steps)]
-        
+
+        rng = random.Random(int(seed)) if seed is not None and int(seed) >= 0 else random
         # Generate 19 random values from possible values
-        values = [random.choice(possible_values) for _ in range(19)]
-        
+        values = [rng.choice(possible_values) for _ in range(19)]
+
         # Format values to match step precision
-        if step_size >= 0.1:
+        if step_size in (0.25, 0.05, 0.01) or (step_size < 0.1):
+            formatted_values = [f"{v:.2f}" for v in values]
+        elif step_size >= 0.1:
             formatted_values = [f"{v:.1f}" for v in values]
-        elif step_size >= 0.05:
-            formatted_values = [f"{v:.2f}" for v in values]
-        elif step_size >= 0.01:
-            formatted_values = [f"{v:.2f}" for v in values]
         else:
             formatted_values = [str(v) for v in values]
             

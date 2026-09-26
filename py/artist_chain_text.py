@@ -26,7 +26,7 @@ class LZArtistChainText:
     CATEGORY = "MyCustomNodes/Anima"
 
     def build(self, artist_text, lz_pipe=None):
-        text = artist_text or ""
+        text = "" if artist_text is None else str(artist_text)
         # 改行(\r\n含む)で分割し、空行を除いて ", " で連結
         lines = text.replace("\r", "").split("\n")
         tags = [line.strip() for line in lines if line.strip()]

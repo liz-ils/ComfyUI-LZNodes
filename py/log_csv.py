@@ -39,7 +39,7 @@ class LZAppendLogToCSV:
         if not filepath:
             filepath = "generation_log.csv"
         
-        lz_pipe = kwargs.get("lz_pipe", {})
+        lz_pipe = kwargs.get("lz_pipe") or {}
         
         seed = lz_pipe.get("seed", kwargs.get("seed", 0))
         steps = lz_pipe.get("steps", kwargs.get("steps", 20))

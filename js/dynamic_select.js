@@ -2,7 +2,7 @@
 
 import { app } from "../../../scripts/app.js";
 
-function updateVisibilityByCount(node) {
+function updateVisibilityByCount(node, opts = {}) {
     if (!node.widgets) return;
     const countW = node.widgets.find(w => w.name === "count");
     const count = Math.max(1, Math.min(10, Number(countW?.value ?? 2)));
@@ -31,15 +31,17 @@ function updateVisibilityByCount(node) {
     const newSize = node.computeSize();
     node.setSize([node.size[0], newSize[1]]);
 
-    // select_index の値を count に収める
-    const selW = node.widgets.find(w => w.name === "select_index");
-    if (selW) {
-        let v = Number(selW.value ?? 1);
-        if (!Number.isFinite(v)) v = 1;
-        v = Math.max(1, Math.min(count, v));
-        if (v !== selW.value) {
-            selW.value = v;
-            if (app?.graph) app.graph.setDirtyCanvas(true, true);
+    // select_index の補正はcount操作時のみ行い、読み込み時に保存値を壊さない
+    if (opts.adjustSelect !== false) {
+        const selW = node.widgets.find(w => w.name === "select_index");
+        if (selW) {
+            let v = Number(selW.value ?? 1);
+            if (!Number.isFinite(v)) v = 1;
+            v = Math.max(1, Math.min(count, v));
+            if (v !== selW.value) {
+                selW.value = v;
+                if (app?.graph) app.graph.setDirtyCanvas(true, true);
+            }
         }
     }
 }
@@ -70,8 +72,8 @@ app.registerExtension({
             const onConfigure = nodeType.prototype.onConfigure;
             nodeType.prototype.onConfigure = function (info) {
                 const r = onConfigure ? onConfigure.apply(this, arguments) : undefined;
-                // 設定反映時も一度だけ反映
-                updateVisibilityByCount(this);
+                // 設定反映時は表示のみ整え、保存されたselect_indexは壊さない
+                updateVisibilityByCount(this, { adjustSelect: false });
                 return r;
             };
         }

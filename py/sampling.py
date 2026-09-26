@@ -45,7 +45,7 @@ class LZKSamplerDecode:
     CATEGORY = "MyCustomNodes/Sampling"
 
     def sample_and_decode(self, seed, steps, cfg, sampler_name, scheduler, denoise, model_preset, **kwargs):
-        lz_pipe = kwargs.get("lz_pipe", {})
+        lz_pipe = kwargs.get("lz_pipe") or {}
 
         # 各種データを取得（個別優先、なければパイプから）
         model = kwargs.get("model", lz_pipe.get("model"))

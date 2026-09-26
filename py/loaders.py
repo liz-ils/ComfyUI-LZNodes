@@ -5,8 +5,26 @@ import comfy.sd
 import comfy.utils
 from .utils import get_checkpoint_hash
 
+# LoRAウェイトキャッシュの上限(フルウェイト保持のため無制限にしない)
+LORA_CACHE_MAX = 32
 
-class EZCheckpointLoader:
+
+def _lora_cache_get(cache, lora_path):
+    lora = cache.get(lora_path)
+    if lora is not None:
+        # LRU的に末尾へ
+        cache.pop(lora_path, None)
+        cache[lora_path] = lora
+    return lora
+
+
+def _lora_cache_put(cache, lora_path, lora, max_entries=LORA_CACHE_MAX):
+    cache[lora_path] = lora
+    while len(cache) > max_entries:
+        cache.pop(next(iter(cache)))
+
+
+class LZCheckpointLoader:
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -53,6 +71,10 @@ class EZCheckpointLoader:
         }
         
         return (model, clip, vae, positive_cond, negative_cond, positive, negative, lz_pipe, ckpt_name, ckpt_hash)
+
+
+# 旧名の互換エイリアス
+EZCheckpointLoader = LZCheckpointLoader
 
 
 class LZSimpleCheckpointLoader:
@@ -118,13 +140,14 @@ class LZLoRALoaderModelOnly:
             return (model, "None", "0.0", "None", "0.0")
 
         lora_path = folder_paths.get_full_path("loras", lora_name)
-        if lora_path is not None:
-            if lora_path in self.loaded_loras:
-                lora = self.loaded_loras[lora_path]
-            else:
-                lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-                self.loaded_loras[lora_path] = lora
-            model, _ = comfy.sd.load_lora_for_models(model, None, lora, strength_model, 0)
+        if lora_path is None:
+            # ファイル消失時は適用なし扱いにし、要求名のまま返さない
+            return (model, "None", "0.0", "None", "0.0")
+        lora = _lora_cache_get(self.loaded_loras, lora_path)
+        if lora is None:
+            lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+            _lora_cache_put(self.loaded_loras, lora_path, lora)
+        model, _ = comfy.sd.load_lora_for_models(model, None, lora, strength_model, 0)
 
         return (model, lora_name, str(strength_model), lora_name, str(strength_model))
 
@@ -178,22 +201,18 @@ class LZLoRAStacker:
                 
                 if model_weight == 0 and clip_weight == 0:
                     continue
-                
-                used_loras.append((lora_name, model_weight))
 
                 lora_path = folder_paths.get_full_path("loras", lora_name)
-                if lora_path is not None:
-                    lora = None
-                    if lora_path in self.loaded_loras:
-                        lora = self.loaded_loras[lora_path]
-                    else:
-                        lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-                        self.loaded_loras[lora_path] = lora
-
-                    model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
-                else:
+                if lora_path is None:
                     # LoRAが見つからなかった場合は使用済みとして記録しない
-                    used_loras.pop()
+                    continue
+                lora = _lora_cache_get(self.loaded_loras, lora_path)
+                if lora is None:
+                    lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+                    _lora_cache_put(self.loaded_loras, lora_path, lora)
+
+                model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
+                used_loras.append((lora_name, model_weight, clip_weight))
         
         # 適用された最新のモデルとCLIPでパイプを更新
         new_pipe = lz_pipe.copy() if lz_pipe else {}
@@ -201,8 +220,15 @@ class LZLoRAStacker:
         new_pipe["clip"] = clip
 
         if used_loras:
-            model_names = ", ".join([n for n, _ in used_loras])
-            model_weights = ", ".join([str(m) for _, m in used_loras])
+            model_names = ", ".join([n for n, _, _ in used_loras])
+            # modelとclipで重みが異なる場合は "m:c" 形式で両方残す
+            weight_strs = []
+            for _, m, c in used_loras:
+                if abs(float(m) - float(c)) < 1e-9:
+                    weight_strs.append(str(m))
+                else:
+                    weight_strs.append(f"{m}:{c}")
+            model_weights = ", ".join(weight_strs)
             new_pipe["lora_name"] = model_names
             new_pipe["lora_strength"] = model_weights
             new_pipe["lora_model"] = model_names

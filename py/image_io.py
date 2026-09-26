@@ -65,7 +65,7 @@ class LZSaveImageAndLog:
         
         results = list()
         
-        lz_pipe = kwargs.get("lz_pipe", {})
+        lz_pipe = kwargs.get("lz_pipe") or {}
         
         # 個別入力があれば優先、なければパイプから取得
         pos_text = kwargs.get("positive_text", lz_pipe.get("positive_text", ""))

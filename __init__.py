@@ -1,7 +1,8 @@
 from .py.text_utils import StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptWeight, LZTagEditor
 from .py.log_csv import LZAppendLogToCSV
 from .py.prompts import DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZCLIPTextEncode
-from .py.loaders import EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZLoRALoaderModelOnly
+from .py.loaders import LZCheckpointLoader, EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZLoRALoaderModelOnly
+from .py.dynamic_prompt import LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString, LZPromptPick
 from .py.anima_loader import LZAnimaLoader
 from .py.krea2_loader import LZKrea2Loader
 from .py.artist_chain_text import LZArtistChainText
@@ -12,7 +13,6 @@ from .py.sampling import LZKSamplerDecode
 from .py.image_io import LZSaveImageAndLog
 from .py.merge_recipe import LZMergeRecipeRandom, LZMergeRecipeManual, LZMergeRecipeRandomAdvanced
 from .py.xy_plot import LZXYPlot, LZXYPlotSampler, LZXYSampler, LZXYGridOutput
-from .py.dynamic_prompt import LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString
 from .py.pipe_info import LZPipeInfo
 from .py.log_reader import LZLogReader
 from .py.pipe_merge import LZPipeMerge
@@ -21,6 +21,7 @@ from .py.batch_save import LZBatchSaveWithLabels
 NODE_CLASS_MAPPINGS = {
     "StringNode": StringNode,
     "DualCLIPTextEncode": DualCLIPTextEncode,
+    "LZCheckpointLoader": LZCheckpointLoader,
     "EZCheckpointLoader": EZCheckpointLoader,
     "AdvancedPositivePrompt": AdvancedPositivePrompt,
     "AdvancedNegativePrompt": AdvancedNegativePrompt,
@@ -59,6 +60,7 @@ NODE_CLASS_MAPPINGS = {
     "LZPromptReplaceSingle": LZPromptReplaceSingle,
     "LZPromptReplaceMulti": LZPromptReplaceMulti,
     "LZPromptReplaceString": LZPromptReplaceString,
+    "LZPromptPick": LZPromptPick,
     "LZPipeInfo": LZPipeInfo,
     "LZLogReader": LZLogReader,
     "LZPipeMerge": LZPipeMerge,
@@ -68,7 +70,8 @@ NODE_CLASS_MAPPINGS = {
 NODE_DISPLAY_NAME_MAPPINGS = {
     "StringNode": "LZ String Output",
     "DualCLIPTextEncode": "LZ Dual CLIP Text Encode",
-    "EZCheckpointLoader": "LZ Checkpoint Loader & Encode",
+    "LZCheckpointLoader": "LZ Checkpoint Loader & Encode",
+    "EZCheckpointLoader": "LZ Checkpoint Loader & Encode (Legacy)",
     "AdvancedPositivePrompt": "LZ Advanced Positive Prompt",
     "AdvancedNegativePrompt": "LZ Advanced Negative Prompt",
     "PresetEmptyLatentImage": "LZ Preset Empty Latent Image",
@@ -106,6 +109,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZPromptReplaceSingle": "LZ Prompt Replace Single",
     "LZPromptReplaceMulti": "LZ Prompt Replace Multi",
     "LZPromptReplaceString": "LZ Prompt Replace String",
+    "LZPromptPick": "LZ Prompt Pick (Multi-source)",
     "LZPipeInfo": "LZ Pipe Info",
     "LZLogReader": "LZ Log Reader",
     "LZPipeMerge": "LZ Pipe Merge",

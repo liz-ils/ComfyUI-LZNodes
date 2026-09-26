@@ -39,14 +39,12 @@ class PresetEmptyLatentImage:
     CATEGORY = "MyCustomNodes/Latent"
 
     def generate(self, size, batch_size, channel_mode, width=None, height=None):
-        # width/height 入力があればプリセットより優先
-        if width is not None and height is not None and int(width) > 0 and int(height) > 0:
-            w = int(width)
-            h = int(height)
-        else:
-            width_str, height_str = size.split("x")
-            w = int(width_str.strip())
-            h = int(height_str.strip())
+        # width/height 入力があればプリセットより優先(片側のみ指定も有効)
+        width_str, height_str = size.split("x")
+        preset_w = int(width_str.strip())
+        preset_h = int(height_str.strip())
+        w = int(width) if width is not None and int(width) > 0 else preset_w
+        h = int(height) if height is not None and int(height) > 0 else preset_h
 
         channels = 16 if channel_mode in ("Anima (16ch)", "Krea2 (16ch)") else 4
         latent = torch.zeros([batch_size, channels, h // 8, w // 8])

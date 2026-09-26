@@ -133,11 +133,13 @@ def apply_lora_value(value, model, clip, loaded_loras):
     if lora_path is None:
         raise ValueError(f"LZ XY Error: LoRA not found: {lora_name}")
 
-    if lora_path in loaded_loras:
-        lora = loaded_loras[lora_path]
-    else:
+    lora = loaded_loras.get(lora_path)
+    if lora is None:
         lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
         loaded_loras[lora_path] = lora
+        # フルウェイト保持のため上限付き(簡易FIFO)
+        while len(loaded_loras) > 32:
+            loaded_loras.pop(next(iter(loaded_loras)))
 
     model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
     return model, clip

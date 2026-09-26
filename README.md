@@ -10,7 +10,7 @@ This extension provides several quality-of-life nodes that condense common workf
 
 *   **LZ Pipe System (`LZPipePack` / `LZPipePackXL` / `LZPipeUnpack` / `LZPipeMerge` / `LZPipeInfo`)**: Simplifies "spaghetti" node connections by bundling `MODEL`, `CLIP`, `VAE`, `CONDITIONING`, `LATENT`, and generation parameters into a single `lz_pipe` connection.
 *   **Smart Loaders**:
-    *   `EZCheckpointLoader`: Loads a checkpoint and automatically encodes positive/negative prompts in a single node.
+    *   `LZCheckpointLoader`: Loads a checkpoint and automatically encodes positive/negative prompts in a single node.
     *   `LZSimpleCheckpointLoader`: A lightweight loader strictly for extracting model components.
     *   `LZLoRAStacker`: Easily stack up to 10 LoRAs with built-in caching for faster generation. Outputs `lora_model` / `lora_weight` (comma-joined names/weights, also carried in `lz_pipe`).
     *   `LZAnimaLoader`: Specialized loader for Anima models that loads the diffusion model, text encoder, and VAE separately.
@@ -25,7 +25,8 @@ This extension provides several quality-of-life nodes that condense common workf
     *   `DualCLIPTextEncode`: Encodes both positive and negative prompts simultaneously.
     *   `LZPromptWeight`: Automatically wraps prompt tags with weight syntax `(tag:weight)`.
     *   `LZTagEditor`: Visually edit up to 10 tags with individual strength and on/off toggles.
-    *   `LZPromptReplaceSingle` / `LZPromptReplaceMulti` / `LZPromptReplaceString`: Dynamically replace placeholders in prompts using CSV files or inline candidate lists.
+    *   `LZPromptReplaceSingle` / `LZPromptReplaceMulti` / `LZPromptReplaceString`: Dynamically replace placeholders in prompts using txt/csv/json files or inline candidate lists. Seeded (`seed`, `-1` = random each run).
+    *   `LZPromptPick`: Pick multiple tags from up to two files plus inline candidates, with random weights (`weight_min/max`), no-duplicate mode (`unique`, default ON), and seeded control.
 *   **Text Utilities**:
     *   `StringNode` / `StringConcatNode`: Basic string output and multi-input concatenation.
     *   `LZTextPreview`: Display string values directly in the node UI.
@@ -46,10 +47,10 @@ This extension provides several quality-of-life nodes that condense common workf
 
 | Category | Nodes |
 |---|---|
-| **Loaders** | EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader, LZKrea2Loader |
+| **Loaders** | LZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader, LZKrea2Loader |
 | **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions, LZArtistChainText |
 | **Prompt** | DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZPromptWeight, LZTagEditor |
-| **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString |
+| **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString, LZPromptPick |
 | **Latent** | PresetEmptyLatentImage |
 | **Pipe** | LZPipePack, LZPipePackXL, LZPipeUnpack, LZPipeInfo, LZPipeMerge |
 | **Sampling** | LZKSamplerDecode |
@@ -99,7 +100,7 @@ This extension provides several quality-of-life nodes that condense common workf
 
 Once installed, the nodes can be found in the ComfyUI add-node menu under the `MyCustomNodes` category (e.g., `MyCustomNodes/Loaders`, `MyCustomNodes/Prompt`, `MyCustomNodes/Sampling`, etc.).
 
-*Tip: A great starting point is connecting an `EZCheckpointLoader` through an `LZPipePack` to an `LZKSamplerDecode`, and finishing with `LZSaveImageAndLog`.*
+*Tip: A great starting point is connecting an `LZCheckpointLoader` through an `LZPipePack` to an `LZKSamplerDecode`, and finishing with `LZSaveImageAndLog`.*
 
 ## License
 

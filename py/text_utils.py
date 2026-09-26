@@ -74,6 +74,7 @@ class LZTextPreview:
     CATEGORY = "MyCustomNodes/Text"
 
     def preview(self, text):
+        text = "" if text is None else str(text)
         return {"ui": {"text": [text]}, "result": (text,)}
 
 
@@ -280,7 +281,7 @@ class LZTagEditor:
         for i in range(1, 11):
             tag_name = kwargs.get(f"tag{i}_name", "").strip()
             if not tag_name:
-                break
+                continue
             tag_strength = kwargs.get(f"tag{i}_strength", 1.0)
             tag_on = kwargs.get(f"tag{i}_onoff", True)
 

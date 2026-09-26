@@ -10,7 +10,7 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
 
 *   **LZ パイプシステム (`LZPipePack` / `LZPipePackXL` / `LZPipeUnpack` / `LZPipeMerge` / `LZPipeInfo`)**: `MODEL`、`CLIP`、`VAE`、`CONDITIONING`、`LATENT`、および各種生成パラメータを1本の `lz_pipe` にまとめることで、ノード同士がスパゲッティのように絡まるのを防ぎます。
 *   **スマートなローダー群**:
-    *   `EZCheckpointLoader`: チェックポイントの読み込みと、ポジティブ/ネガティブプロンプトのエンコードを1つのノードで同時に行います。
+    *   `LZCheckpointLoader`: チェックポイントの読み込みと、ポジティブ/ネガティブプロンプトのエンコードを1つのノードで同時に行います。
     *   `LZSimpleCheckpointLoader`: モデルの各コンポーネントを取り出すことに特化した軽量なローダーです。
     *   `LZLoRAStacker`: 最大10個までのLoRAを簡単にスタック可能です。キャッシュ機能により高速な生成をサポートします。`lora_model` / `lora_weight`(カンマ連結のモデル名/重み、`lz_pipe` にも格納)を出力します。
     *   `LZAnimaLoader`: Animaモデル専用のローダーで、拡散モデル、テキストエンコーダー、VAEを個別に読み込みます。
@@ -25,7 +25,8 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
     *   `DualCLIPTextEncode`: ポジティブプロンプトとネガティブプロンプトを横並びで同時にエンコードするノードです。
     *   `LZPromptWeight`: プロンプトタグに重み構文 `(tag:weight)` を自動で付与します。
     *   `LZTagEditor`: 最大10個のタグを強度やON/OFFと共に視覚的に編集できます。
-    *   `LZPromptReplaceSingle` / `LZPromptReplaceMulti` / `LZPromptReplaceString`: CSVファイルや改行区切りの候補リストからランダムに選択し、プロンプト内のプレースホルダーを動的に置換します。
+    *   `LZPromptReplaceSingle` / `LZPromptReplaceMulti` / `LZPromptReplaceString`: txt/csv/jsonファイルや改行区切りの候補リストからランダムに選択し、プロンプト内のプレースホルダーを動的に置換します。seed対応（`-1` は毎回ランダム）。
+    *   `LZPromptPick`: 最大2ファイル＋直書き候補から複数個ピックし、ランダム強度（`weight_min/max`）、重複なし（`unique`、標準ON）、seed制御に対応します。
 *   **テキストユーティリティ**:
     *   `StringNode` / `StringConcatNode`: 基本的な文字列出力、および複数入力の結合ノードです。
     *   `LZTextPreview`: 文字列をノードUI上に直接表示します。
@@ -46,10 +47,10 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
 
 | カテゴリ | ノード名 |
 |---|---|
-| **Loaders** | EZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader, LZKrea2Loader |
+| **Loaders** | LZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader, LZKrea2Loader |
 | **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions, LZArtistChainText |
 | **Prompt** | DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZPromptWeight, LZTagEditor |
-| **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString |
+| **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString, LZPromptPick |
 | **Latent** | PresetEmptyLatentImage |
 | **Pipe** | LZPipePack, LZPipePackXL, LZPipeUnpack, LZPipeInfo, LZPipeMerge |
 | **Sampling** | LZKSamplerDecode |
@@ -99,7 +100,7 @@ ComfyUI-LZNodes は [ComfyUI](https://github.com/comfyanonymous/ComfyUI) 向け�
 
 インストール後、ComfyUIの新規ノード追加メニュー内の `MyCustomNodes` カテゴリ（例: `MyCustomNodes/Loaders`, `MyCustomNodes/Prompt`, `MyCustomNodes/Sampling` など）から呼び出すことができます。
 
-*ヒント: `EZCheckpointLoader`を用意し、`LZPipePack` を通して `LZKSamplerDecode` に繋ぎ、最後に `LZSaveImageAndLog` で締めくくるのが、最も簡単で強力な使い方です。*
+*ヒント: `LZCheckpointLoader`を用意し、`LZPipePack` を通して `LZKSamplerDecode` に繋ぎ、最後に `LZSaveImageAndLog` で締めくくるのが、最も簡単で強力な使い方です。*
 
 ## ライセンス
 

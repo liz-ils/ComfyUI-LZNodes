@@ -23,7 +23,13 @@ class LZLogReader:
         if not filepath or not os.path.exists(filepath):
             return ("", "", 0, 20, 8.0, "euler", "normal", 512, 512, "")
 
-        with open(filepath, "r", encoding="utf-8") as f:
+        try:
+            if os.path.getsize(filepath) > 20 * 1024 * 1024:
+                return ("", "", 0, 20, 8.0, "euler", "normal", 512, 512, "")
+        except OSError:
+            return ("", "", 0, 20, 8.0, "euler", "normal", 512, 512, "")
+
+        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
             content = f.read()
 
         blocks = self._parse_log_blocks(content)
@@ -31,20 +37,23 @@ class LZLogReader:
         if not blocks:
             return ("", "", 0, 20, 8.0, "euler", "normal", 512, 512, "")
 
-        if index == -1 or index >= len(blocks):
+        if index == -1:
             block = blocks[-1]
-        else:
+        elif 0 <= index < len(blocks):
             block = blocks[index]
+        else:
+            # 範囲外は最終ブロックの黙った返却ではなく既定値を返す
+            return ("", "", 0, 20, 8.0, "euler", "normal", 512, 512, "")
 
         positive = block.get("positive", "")
         negative = block.get("negative", "")
-        seed = self._try_int(block.get("seed", 0))
-        steps = self._try_int(block.get("steps", 20))
+        seed = self._try_int(block.get("seed", 0), 0)
+        steps = self._try_int(block.get("steps", 20), 20)
         cfg = self._try_float(block.get("cfg", 8.0))
         sampler = block.get("sampler", "euler")
         scheduler = block.get("scheduler", "normal")
-        width = self._try_int(block.get("width", 512))
-        height = self._try_int(block.get("height", 512))
+        width = self._try_int(block.get("width", 512), 512)
+        height = self._try_int(block.get("height", 512), 512)
         ckpt_name = block.get("ckpt_name", "")
 
         return (positive, negative, seed, steps, cfg, sampler, scheduler, width, height, ckpt_name)
@@ -68,7 +77,7 @@ class LZLogReader:
             
             if line.startswith("Model:"):
                 model_part = line[6:].strip()
-                hash_match = re.search(r'\(Hash: ([a-f0-9]+)\)', model_part)
+                hash_match = re.search(r'\(Hash: ([a-fA-F0-9]+)\)', model_part)
                 if hash_match:
                     current_block["ckpt_hash"] = hash_match.group(1)
                     model_name = model_part.replace("(Hash:", "").replace(hash_match.group(1) + ")", "").strip()
@@ -88,7 +97,7 @@ class LZLogReader:
                 continue
             
             if line.startswith("Seed:"):
-                seed_match = re.match(r'Seed:\s*(\d+)\s*\|\s*Steps:\s*(\d+)\s*\|\s*CFG:\s*([\d.]+)\s*\|\s*Sampler:\s*(\w+)\s*\|\s*Scheduler:\s*(\w+)', line)
+                seed_match = re.match(r'Seed:\s*(\d+)\s*\|\s*Steps:\s*(\d+)\s*\|\s*CFG:\s*([\d.]+)\s*\|\s*Sampler:\s*(.+?)\s*\|\s*Scheduler:\s*(.+?)\s*$', line)
                 if seed_match:
                     current_block["seed"] = seed_match.group(1)
                     current_block["steps"] = seed_match.group(2)
@@ -101,18 +110,18 @@ class LZLogReader:
             if line.startswith("Positive:"):
                 i += 1
                 positive_lines = []
-                while i < len(lines) and not lines[i].startswith("Negative:"):
+                while i < len(lines) and not lines[i].startswith(("Negative:", "Date:")):
                     positive_lines.append(lines[i])
                     i += 1
                 current_block["positive"] = "\n".join(positive_lines).strip()
                 continue
-            
+
             if line.startswith("Negative:"):
                 i += 1
                 negative_lines = []
                 while i < len(lines):
                     # 次のブロック開始ヘッダが来たら終了
-                    if lines[i].startswith(("Date:", "Model:", "LoRAs:", "Size:", "Seed:", "Positive:", "Negative:")):
+                    if lines[i].startswith(("Date:", "Model:", "LoRAs:", "LoRA strengths:", "Size:", "Seed:", "Positive:", "Negative:")):
                         break
                     negative_lines.append(lines[i])
                     i += 1
@@ -126,11 +135,11 @@ class LZLogReader:
 
         return blocks
 
-    def _try_int(self, value):
+    def _try_int(self, value, default=0):
         try:
             return int(value)
         except (ValueError, TypeError):
-            return 0
+            return default
 
     def _try_float(self, value):
         try:
