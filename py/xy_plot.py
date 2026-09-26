@@ -13,6 +13,61 @@ import gc
 from .utils import get_checkpoint_hash, parse_values
 
 
+def _infer_latent_channels(model, default=4):
+    """Fallback latentのチャンネル数をモデルから推定する。失敗時はdefault。"""
+    try:
+        candidates = []
+        dm = None
+        if model is not None and hasattr(model, "get_model_object"):
+            try:
+                dm = model.get_model_object("diffusion_model")
+            except Exception:
+                dm = None
+        objs = [model, dm]
+        if dm is not None:
+            objs.append(getattr(dm, "model_config", None))
+        if model is not None:
+            objs.append(getattr(model, "model_config", None))
+            objs.append(getattr(getattr(model, "model", None), "model_config", None))
+        for obj in objs:
+            if obj is None:
+                continue
+            for attr in ("latent_channels", "num_channels", "in_channels", "input_channels"):
+                try:
+                    v = getattr(obj, attr, None)
+                    if callable(v):
+                        continue
+                    if v in (4, 16):
+                        candidates.append(int(v))
+                except Exception:
+                    continue
+            latent_format = getattr(obj, "latent_format", None)
+            for attr in ("num_channels", "channels"):
+                try:
+                    v = getattr(latent_format, attr, None)
+                    if v in (4, 16):
+                        candidates.append(int(v))
+                except Exception:
+                    continue
+        if 16 in candidates:
+            return 16
+        if 4 in candidates:
+            return 4
+    except Exception:
+        pass
+    return default
+
+
+def _make_seeded_latent(width, height, seed, model=None):
+    """幅/高さ/シードから再現性のあるfallback latentを作る。"""
+    channels = _infer_latent_channels(model, default=4)
+    latent_w = max(1, width // 8)
+    latent_h = max(1, height // 8)
+    gen = torch.Generator().manual_seed(int(seed) & 0xFFFFFFFFFFFFFFFF)
+    samples = torch.randn([1, channels, latent_h, latent_w], generator=gen)
+    return {"samples": samples}
+
+
 def escape_prompt(text, enabled=True):
     if not enabled:
         return text
@@ -245,9 +300,7 @@ class LZXYPlotSampler:
         if latent_image is None:
             if width <= 0 or height <= 0:
                 raise ValueError("LZXYPlotSampler Error: latent_image or valid width/height required.")
-            latent_w = width // 8
-            latent_h = height // 8
-            latent_image = {"samples": torch.randn([1, 4, latent_h, latent_w])}
+            latent_image = _make_seeded_latent(width, height, seed, base_pipe.get("model"))
 
         base_model = base_pipe.get("model")
         base_clip = base_pipe.get("clip")
@@ -274,11 +327,13 @@ class LZXYPlotSampler:
         if base_model is None or base_positive is None or base_negative is None:
             raise ValueError("LZXYPlotSampler Error: Missing required data (model, positive, negative).")
 
+        base_ckpt_name = base_pipe.get("ckpt_name", "Unknown")
+        base_ckpt_hash = base_pipe.get("ckpt_hash", "Unknown")
         current_model = base_model
         current_clip = base_clip
         current_vae = base_vae
-        current_ckpt_name = base_pipe.get("ckpt_name", "Unknown")
-        current_ckpt_hash = base_pipe.get("ckpt_hash", "Unknown")
+        current_ckpt_name = base_ckpt_name
+        current_ckpt_hash = base_ckpt_hash
         current_sampler = sampler_name
         current_scheduler = scheduler
         current_pos_text = base_pos_text
@@ -288,19 +343,20 @@ class LZXYPlotSampler:
 
         for y_idx, y_val in enumerate(y_list):
             for x_idx, x_val in enumerate(x_list):
-                model = current_model
-                clip = current_clip
-                vae = current_vae
-                ckpt_name = current_ckpt_name
-                ckpt_hash = current_ckpt_hash
-                iter_sampler = current_sampler
-                iter_scheduler = current_scheduler
-                pos_text = current_pos_text
-                neg_text = current_neg_text
+                # 各セルはベースから独立して開始し、前セルのLoRA/モデル差し替えを引き継がない
+                model = base_model
+                clip = base_clip
+                vae = base_vae
+                ckpt_name = base_ckpt_name
+                ckpt_hash = base_ckpt_hash
+                iter_sampler = sampler_name
+                iter_scheduler = scheduler
+                pos_text = base_pos_text
+                neg_text = base_neg_text
                 positive = base_positive
                 negative = base_negative
 
-                # --- X軸の値を適用 ---
+                # --- モデル切替を先に適用(X→Yの順でYが勝つ) ---
                 if x_type == "checkpoint":
                     model, clip, vae, ckpt_hash = load_checkpoint_for_value(x_val)
                     ckpt_name = x_val
@@ -309,22 +365,6 @@ class LZXYPlotSampler:
                     model, ckpt_hash = load_diffusion_model_for_value(x_val)
                     ckpt_name = x_val
                     gc.collect()
-                elif x_type == "lora":
-                    model, clip = apply_lora_value(x_val, model, clip, self.loaded_loras)
-                elif x_type == "positive":
-                    if clip is None:
-                        raise ValueError("LZXYPlotSampler Error: CLIP is required for positive prompt encoding.")
-                    positive, pos_text = encode_replaced_prompt(clip, base_pos_text, x_replace_key, x_val, replace_escape)
-                elif x_type == "negative":
-                    if clip is None:
-                        raise ValueError("LZXYPlotSampler Error: CLIP is required for negative prompt encoding.")
-                    negative, neg_text = encode_replaced_prompt(clip, base_neg_text, x_replace_key, x_val, replace_escape)
-                elif x_type == "sampler":
-                    iter_sampler = x_val
-                elif x_type == "scheduler":
-                    iter_scheduler = x_val
-
-                # --- Y軸の値を適用 ---
                 if y_type == "checkpoint":
                     model, clip, vae, ckpt_hash = load_checkpoint_for_value(y_val)
                     ckpt_name = y_val
@@ -333,9 +373,23 @@ class LZXYPlotSampler:
                     model, ckpt_hash = load_diffusion_model_for_value(y_val)
                     ckpt_name = y_val
                     gc.collect()
-                elif y_type == "lora":
+
+                # --- LoRAは切替後のモデルに適用 ---
+                if x_type == "lora":
+                    model, clip = apply_lora_value(x_val, model, clip, self.loaded_loras)
+                if y_type == "lora":
                     model, clip = apply_lora_value(y_val, model, clip, self.loaded_loras)
-                elif y_type == "positive":
+
+                # --- プロンプトは最終CLIPでエンコード ---
+                if x_type == "positive":
+                    if clip is None:
+                        raise ValueError("LZXYPlotSampler Error: CLIP is required for positive prompt encoding.")
+                    positive, pos_text = encode_replaced_prompt(clip, base_pos_text, x_replace_key, x_val, replace_escape)
+                elif x_type == "negative":
+                    if clip is None:
+                        raise ValueError("LZXYPlotSampler Error: CLIP is required for negative prompt encoding.")
+                    negative, neg_text = encode_replaced_prompt(clip, base_neg_text, x_replace_key, x_val, replace_escape)
+                if y_type == "positive":
                     if clip is None:
                         raise ValueError("LZXYPlotSampler Error: CLIP is required for positive prompt encoding.")
                     positive, pos_text = encode_replaced_prompt(clip, base_pos_text, y_replace_key, y_val, replace_escape)
@@ -343,7 +397,24 @@ class LZXYPlotSampler:
                     if clip is None:
                         raise ValueError("LZXYPlotSampler Error: CLIP is required for negative prompt encoding.")
                     negative, neg_text = encode_replaced_prompt(clip, base_neg_text, y_replace_key, y_val, replace_escape)
-                elif y_type == "sampler":
+
+                # --- checkpoint切替時はベース文言を新CLIPで再エンコード ---
+                if clip is not base_clip and clip is not None:
+                    if x_type != "positive" and y_type != "positive" and base_pos_text:
+                        tokens_pos = clip.tokenize(base_pos_text)
+                        positive = clip.encode_from_tokens_scheduled(tokens_pos)
+                        pos_text = base_pos_text
+                    if x_type != "negative" and y_type != "negative" and base_neg_text:
+                        tokens_neg = clip.tokenize(base_neg_text)
+                        negative = clip.encode_from_tokens_scheduled(tokens_neg)
+                        neg_text = base_neg_text
+
+                # --- Sampler/Scheduler ---
+                if x_type == "sampler":
+                    iter_sampler = x_val
+                elif x_type == "scheduler":
+                    iter_scheduler = x_val
+                if y_type == "sampler":
                     iter_sampler = y_val
                 elif y_type == "scheduler":
                     iter_scheduler = y_val
@@ -536,9 +607,7 @@ class LZXYSampler:
         if latent_image is None:
             if width <= 0 or height <= 0:
                 raise ValueError("LZXYSampler Error: latent_image or valid width/height required.")
-            latent_w = width // 8
-            latent_h = height // 8
-            latent_image = {"samples": torch.randn([1, 4, latent_h, latent_w])}
+            latent_image = _make_seeded_latent(width, height, seed, model if model is not None else lz_pipe.get("model"))
 
         base_model = model if model is not None else lz_pipe.get("model")
         base_clip = clip if clip is not None else lz_pipe.get("clip")
@@ -573,14 +642,10 @@ class LZXYSampler:
 
         for y_idx, y_val in enumerate(y_list):
             for x_idx, x_val in enumerate(x_list):
-                model = current_model
-                clip = current_clip
-                vae = current_vae
-
-                temp_pipe = lz_pipe.copy()
-                temp_pipe["model"] = model
-                temp_pipe["clip"] = clip
-                temp_pipe["vae"] = vae
+                # 各セルはベースから独立して開始し、前セルのLoRA/モデル差し替えを引き継がない
+                model = base_model
+                clip = base_clip
+                vae = base_vae
 
                 temp_positive = base_positive
                 temp_negative = base_negative
@@ -589,77 +654,61 @@ class LZXYSampler:
                 temp_sampler = sampler_name
                 temp_scheduler = scheduler
 
+                # --- モデル切替を先に適用(X→Yの順でYが勝つ) ---
                 if x_type == "checkpoint":
                     model, clip, vae, ckpt_hash = load_checkpoint_for_value(x_val)
-                    temp_pipe["model"] = model
-                    temp_pipe["clip"] = clip
-                    temp_pipe["vae"] = vae
-                    temp_pipe["ckpt_name"] = x_val
-                    temp_pipe["ckpt_hash"] = ckpt_hash
                     gc.collect()
-
                 elif x_type == "diffusion_model":
                     model, ckpt_hash = load_diffusion_model_for_value(x_val)
-                    temp_pipe["model"] = model
-                    temp_pipe["ckpt_name"] = x_val
-                    temp_pipe["ckpt_hash"] = ckpt_hash
+                    gc.collect()
+                if y_type == "checkpoint":
+                    model, clip, vae, ckpt_hash = load_checkpoint_for_value(y_val)
+                    gc.collect()
+                elif y_type == "diffusion_model":
+                    model, ckpt_hash = load_diffusion_model_for_value(y_val)
                     gc.collect()
 
-                elif x_type == "lora":
+                # --- LoRAは切替後のモデルに適用 ---
+                if x_type == "lora":
                     model, clip = apply_lora_value(x_val, model, clip, self.loaded_loras)
-                    temp_pipe["model"] = model
-                    temp_pipe["clip"] = clip
+                if y_type == "lora":
+                    model, clip = apply_lora_value(y_val, model, clip, self.loaded_loras)
 
-                elif x_type == "positive":
+                # --- プロンプトは最終CLIPでエンコード ---
+                if x_type == "positive":
                     if clip is None:
                         raise ValueError("LZXYSampler Error: CLIP is required for positive prompt encoding.")
                     temp_positive, temp_pos_text = encode_replaced_prompt(clip, base_pos_text, x_replace_key, x_val, replace_escape)
-
                 elif x_type == "negative":
                     if clip is None:
                         raise ValueError("LZXYSampler Error: CLIP is required for negative prompt encoding.")
                     temp_negative, temp_neg_text = encode_replaced_prompt(clip, base_neg_text, x_replace_key, x_val, replace_escape)
-
-                elif x_type == "sampler":
-                    temp_sampler = x_val
-
-                elif x_type == "scheduler":
-                    temp_scheduler = x_val
-
-                if y_type == "checkpoint":
-                    model, clip, vae, ckpt_hash = load_checkpoint_for_value(y_val)
-                    temp_pipe["model"] = model
-                    temp_pipe["clip"] = clip
-                    temp_pipe["vae"] = vae
-                    temp_pipe["ckpt_name"] = y_val
-                    temp_pipe["ckpt_hash"] = ckpt_hash
-                    gc.collect()
-
-                elif y_type == "diffusion_model":
-                    model, ckpt_hash = load_diffusion_model_for_value(y_val)
-                    temp_pipe["model"] = model
-                    temp_pipe["ckpt_name"] = y_val
-                    temp_pipe["ckpt_hash"] = ckpt_hash
-                    gc.collect()
-
-                elif y_type == "lora":
-                    model, clip = apply_lora_value(y_val, model, clip, self.loaded_loras)
-                    temp_pipe["model"] = model
-                    temp_pipe["clip"] = clip
-
-                elif y_type == "positive":
+                if y_type == "positive":
                     if clip is None:
                         raise ValueError("LZXYSampler Error: CLIP is required for positive prompt encoding.")
                     temp_positive, temp_pos_text = encode_replaced_prompt(clip, base_pos_text, y_replace_key, y_val, replace_escape)
-
                 elif y_type == "negative":
                     if clip is None:
                         raise ValueError("LZXYSampler Error: CLIP is required for negative prompt encoding.")
                     temp_negative, temp_neg_text = encode_replaced_prompt(clip, base_neg_text, y_replace_key, y_val, replace_escape)
 
-                elif y_type == "sampler":
-                    temp_sampler = y_val
+                # --- checkpoint切替時はベース文言を新CLIPで再エンコード ---
+                if clip is not base_clip and clip is not None:
+                    if x_type != "positive" and y_type != "positive" and base_pos_text:
+                        tokens_pos = clip.tokenize(base_pos_text)
+                        temp_positive = clip.encode_from_tokens_scheduled(tokens_pos)
+                        temp_pos_text = base_pos_text
+                    if x_type != "negative" and y_type != "negative" and base_neg_text:
+                        tokens_neg = clip.tokenize(base_neg_text)
+                        temp_negative = clip.encode_from_tokens_scheduled(tokens_neg)
+                        temp_neg_text = base_neg_text
 
+                if x_type == "sampler":
+                    temp_sampler = x_val
+                elif x_type == "scheduler":
+                    temp_scheduler = x_val
+                if y_type == "sampler":
+                    temp_sampler = y_val
                 elif y_type == "scheduler":
                     temp_scheduler = y_val
 
@@ -822,8 +871,12 @@ class LZXYGridOutput:
                     else:
                         img = Image.fromarray((img_data * 255).astype(np.uint8), mode="RGB")
 
-                x_pos = label_width + col * img_width + (col + 1) if add_border else label_width + col * img_width
-                y_pos = label_height + row * img_height + (row + 1) if add_border else label_height + row * img_height
+                if add_border:
+                    x_pos = label_width + col * img_width + (col + 1)
+                    y_pos = label_height + row * img_height + (row + 1)
+                else:
+                    x_pos = col * img_width
+                    y_pos = row * img_height
 
                 if channels == 4:
                     # アルファを考慮して貼り付け
@@ -837,10 +890,11 @@ class LZXYGridOutput:
                 x_label = x_labels[col] if col < len(x_labels) else f"x{col}"
                 param_text_lines.append(f"[{row},{col}] X={x_label} Y={y_label}")
 
-                if row == 0:
+                if add_border and row == 0:
                     draw.text((x_pos + img_width // 2 - 20, label_font_size // 2), x_label[:15], fill="black", font=font)
 
-            draw.text((label_font_size // 2, y_pos + img_height // 2 - label_font_size // 2), y_label[:15], fill="black", font=font)
+            if add_border:
+                draw.text((label_font_size // 2, y_pos + img_height // 2 - label_font_size // 2), y_label[:15], fill="black", font=font)
 
         grid_np = np.array(grid_img)
         # RGBAの場合はRGBに変換してから出力(チャンネルは最後の軸)

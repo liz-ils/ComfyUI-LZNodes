@@ -1241,6 +1241,14 @@ class LZAnimaArtistCrossAttn:
             user_weights = [1.0] * n
             has_explicit_weights = False
 
+        # ::weight構文が使われた場合はツールチップ通り正規化を自動無効化する
+        if has_explicit_weights and normalize_w:
+            logger.info(
+                "[LZAnimaCrossAttn] ::weight syntax detected, "
+                "normalize_weights auto-disabled.",
+            )
+            normalize_w = False
+
         if fusion_mode == FUSION_BASE_PRESERVE and float(strength) < 0.3:
             logger.info(
                 "[LZAnimaCrossAttn] fusion=base_preserve with strength=%.2f "
@@ -1432,16 +1440,4 @@ class LZAnimaArtistNode:
         return (patched_model, cond, positive_text)
 
 
-NODE_CLASS_MAPPINGS = {
-    "LZAnimaArtistPack": LZAnimaArtistPack,
-    "LZAnimaArtistOptions": LZAnimaArtistOptions,
-    "LZAnimaArtistCrossAttn": LZAnimaArtistCrossAttn,
-    "LZAnimaArtistNode": LZAnimaArtistNode,
-}
-
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "LZAnimaArtistPack": "LZ Anima Artist Pack (Split + Encode)",
-    "LZAnimaArtistOptions": "LZ Anima Artist Options (Advanced)",
-    "LZAnimaArtistCrossAttn": "LZ Anima Artist Cross-Attn (v2)",
-    "LZAnimaArtistNode": "LZ Anima Artist Node",
-}
+# 登録情報はルートの __init__.py が正本。このモジュールでは重複定義しない。

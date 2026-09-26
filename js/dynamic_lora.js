@@ -93,11 +93,15 @@ app.registerExtension({
                         let loraW = this.widgets.find(w => w.name === `lora_${i}`);
                         let mw = this.widgets.find(w => w.name === `model_weight_${i}`);
                         let cw = this.widgets.find(w => w.name === `clip_weight_${i}`);
-                        
+
                         if (i > keepVisible) {
                             if (loraW && loraW.type !== "hidden_text") { loraW.origType = loraW.type; loraW.type = "hidden_text"; loraW.computeSize = () => [0, -4]; }
                             if (mw && mw.type !== "hidden_text") { mw.origType = mw.type; mw.type = "hidden_text"; mw.computeSize = () => [0, -4]; }
                             if (cw && cw.type !== "hidden_text") { cw.origType = cw.type; cw.type = "hidden_text"; cw.computeSize = () => [0, -4]; }
+                        } else {
+                            if (loraW && loraW.type === "hidden_text") { loraW.type = loraW.origType || "combo"; loraW.computeSize = undefined; }
+                            if (mw && mw.type === "hidden_text") { mw.type = mw.origType || "number"; mw.computeSize = undefined; }
+                            if (cw && cw.type === "hidden_text") { cw.type = cw.origType || "number"; cw.computeSize = undefined; }
                         }
                     }
                     this.setSize(this.computeSize());
