@@ -118,7 +118,13 @@ class LZKSamplerDecode:
         new_pipe["height"] = h
         new_pipe["ckpt_name"] = (lz_pipe or {}).get("ckpt_name", "Unknown")
         new_pipe["ckpt_hash"] = (lz_pipe or {}).get("ckpt_hash", "Unknown")
-        new_pipe["lora_name"] = (lz_pipe or {}).get("lora_name", "")
-        new_pipe["lora_strength"] = (lz_pipe or {}).get("lora_strength", "")
+        # LoRA 情報は複数対応で引き継ぐ(文字列 + 構造化リスト)
+        for _k in ("lora_name", "lora_strength", "lora_model", "lora_weight", "loras"):
+            if (lz_pipe or {}).get(_k) is not None:
+                new_pipe[_k] = (lz_pipe or {}).get(_k)
+        if "lora_model" not in new_pipe and new_pipe.get("lora_name"):
+            new_pipe["lora_model"] = new_pipe.get("lora_name")
+        if "lora_weight" not in new_pipe and new_pipe.get("lora_strength"):
+            new_pipe["lora_weight"] = new_pipe.get("lora_strength")
 
         return (image, new_pipe, pos_text, neg_text, w, h)

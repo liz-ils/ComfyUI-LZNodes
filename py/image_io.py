@@ -10,6 +10,8 @@ from PIL.PngImagePlugin import PngInfo
 import random
 import string
 
+from .utils import get_pipe_loras, lora_weight_str, pipe_lora_strings
+
 class LZSaveImageAndLog:
     def __init__(self):
         self.output_dir = folder_paths.get_output_directory()
@@ -79,9 +81,22 @@ class LZSaveImageAndLog:
         scheduler = kwargs.get("scheduler", lz_pipe.get("scheduler", "Unknown"))
         ckpt_name = kwargs.get("ckpt_name", lz_pipe.get("ckpt_name", "Unknown"))
         ckpt_hash = kwargs.get("ckpt_hash", lz_pipe.get("ckpt_hash", "Unknown"))
-        # lora_model/lora_weight を優先し、無ければ従来の lora_name/lora_strength にフォールバック
-        lora_model = kwargs.get("lora_model") or lz_pipe.get("lora_model") or lz_pipe.get("lora_name") or ""
-        lora_weight = kwargs.get("lora_weight") or lz_pipe.get("lora_weight") or lz_pipe.get("lora_strength") or ""
+        # 複数 LoRA 対応: 直接入力があれば優先、なければ pipe(構造化 loras 含む)から取得
+        _direct_model = kwargs.get("lora_model")
+        _direct_weight = kwargs.get("lora_weight")
+        if _direct_model:
+            lora_model = _direct_model
+            lora_weight = _direct_weight or lz_pipe.get("lora_weight") or lz_pipe.get("lora_strength") or ""
+            lora_entries = None
+        else:
+            lora_entries = get_pipe_loras(lz_pipe)
+            if lora_entries:
+                lora_model = ", ".join(e["name"] for e in lora_entries)
+                lora_weight = ", ".join(lora_weight_str(e.get("model_weight", 1.0), e.get("clip_weight")) for e in lora_entries)
+            else:
+                # lora_model/lora_weight を優先し、無ければ従来の lora_name/lora_strength にフォールバック
+                lora_model = lz_pipe.get("lora_model") or lz_pipe.get("lora_name") or ""
+                lora_weight = lz_pipe.get("lora_weight") or lz_pipe.get("lora_strength") or ""
 
         log_text = ""
         if add_timestamp:
@@ -91,9 +106,14 @@ class LZSaveImageAndLog:
             log_text += f"Model: {ckpt_name} (Hash: {ckpt_hash})\n"
 
         if lora_model:
-            log_text += f"LoRAs: {lora_model}\n"
-            if lora_weight:
-                log_text += f"LoRA strengths: {lora_weight}\n"
+            if lora_entries and len(lora_entries) > 1:
+                log_text += f"LoRAs ({len(lora_entries)}): {lora_model}\n"
+                for e in lora_entries:
+                    log_text += f"  - {e['name']}: {lora_weight_str(e.get('model_weight', 1.0), e.get('clip_weight'))}\n"
+            else:
+                log_text += f"LoRAs: {lora_model}\n"
+                if lora_weight:
+                    log_text += f"LoRA strengths: {lora_weight}\n"
             
         log_text += f"Size: {width} x {height}\n"
         if seed != "Unknown":

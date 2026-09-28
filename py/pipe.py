@@ -1,5 +1,7 @@
 # pipe.py
 
+from .utils import pipe_lora_strings
+
 
 class LZPipePack:
     @classmethod
@@ -122,13 +124,24 @@ class LZPipeUnpack:
     CATEGORY = "MyCustomNodes/Pipe"
 
     def unpack(self, lz_pipe):
+        lora_name, lora_strength, _count = pipe_lora_strings(lz_pipe or {})
+        # 後方互換: 生の文字列フィールドがあればそちらを優先(空でなければ)
+        raw_name = (lz_pipe or {}).get("lora_name", "")
+        raw_strength = (lz_pipe or {}).get("lora_strength", "")
+        raw_model = (lz_pipe or {}).get("lora_model", "")
+        raw_weight = (lz_pipe or {}).get("lora_weight", "")
+        # pipe_lora_strings は loras リスト優先で正規化済み。raw が空でなければ raw を使う
+        out_name = raw_name if raw_name else lora_name
+        out_strength = raw_strength if raw_strength else lora_strength
+        out_model = raw_model if raw_model else lora_name
+        out_weight = raw_weight if raw_weight else lora_strength
         return (
             lz_pipe.get("model"), lz_pipe.get("clip"), lz_pipe.get("vae"),
             lz_pipe.get("positive"), lz_pipe.get("negative"), lz_pipe.get("latent"),
             lz_pipe.get("positive_text", ""), lz_pipe.get("negative_text", ""),
             lz_pipe.get("width", 0), lz_pipe.get("height", 0),
             lz_pipe.get("ckpt_name", "Unknown"), lz_pipe.get("ckpt_hash", "Unknown"),
-            lz_pipe.get("lora_name", ""), lz_pipe.get("lora_strength", ""),
-            lz_pipe.get("lora_model", lz_pipe.get("lora_name", "")),
-            lz_pipe.get("lora_weight", lz_pipe.get("lora_strength", ""))
+            out_name, out_strength,
+            out_model,
+            out_weight
         )

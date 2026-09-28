@@ -8,7 +8,7 @@ from PIL import Image
 import PIL.PngImagePlugin
 import folder_paths
 
-from .utils import sanitize_filename
+from .utils import sanitize_filename, get_pipe_loras, lora_weight_str
 
 
 def parse_labels(text):
@@ -159,6 +159,24 @@ class LZBatchSaveWithLabels:
                 ckpt_name = lz_pipe.get("ckpt_name", "")
                 if ckpt_name:
                     param_lines.append(f"Model: {ckpt_name}")
+                # 複数 LoRA 対応
+                _lora_entries = get_pipe_loras(lz_pipe)
+                if _lora_entries:
+                    if len(_lora_entries) == 1:
+                        _e = _lora_entries[0]
+                        param_lines.append(f"LoRAs: {_e['name']}")
+                        param_lines.append(f"LoRA strengths: {lora_weight_str(_e.get('model_weight', 1.0), _e.get('clip_weight'))}")
+                    else:
+                        param_lines.append(f"LoRAs ({len(_lora_entries)}): {', '.join(e['name'] for e in _lora_entries)}")
+                        for _e in _lora_entries:
+                            param_lines.append(f"  - {_e['name']}: {lora_weight_str(_e.get('model_weight', 1.0), _e.get('clip_weight'))}")
+                else:
+                    _lm = lz_pipe.get("lora_model") or lz_pipe.get("lora_name") or ""
+                    _lw = lz_pipe.get("lora_weight") or lz_pipe.get("lora_strength") or ""
+                    if _lm:
+                        param_lines.append(f"LoRAs: {_lm}")
+                        if _lw:
+                            param_lines.append(f"LoRA strengths: {_lw}")
                 seed = lz_pipe.get("seed")
                 steps = lz_pipe.get("steps")
                 cfg = lz_pipe.get("cfg")
@@ -259,6 +277,23 @@ class LZBatchSaveWithLabels:
                     h = lz_pipe.get("ckpt_hash", "")
                     if h:
                         f.write(f"Hash: {h}\n")
+                    _log_loras = get_pipe_loras(lz_pipe)
+                    if _log_loras:
+                        if len(_log_loras) == 1:
+                            _e = _log_loras[0]
+                            f.write(f"LoRAs: {_e['name']}\n")
+                            f.write(f"LoRA strengths: {lora_weight_str(_e.get('model_weight', 1.0), _e.get('clip_weight'))}\n")
+                        else:
+                            f.write(f"LoRAs ({len(_log_loras)}): {', '.join(e['name'] for e in _log_loras)}\n")
+                            for _e in _log_loras:
+                                f.write(f"  - {_e['name']}: {lora_weight_str(_e.get('model_weight', 1.0), _e.get('clip_weight'))}\n")
+                    else:
+                        _lm = lz_pipe.get("lora_model") or lz_pipe.get("lora_name") or ""
+                        _lw = lz_pipe.get("lora_weight") or lz_pipe.get("lora_strength") or ""
+                        if _lm:
+                            f.write(f"LoRAs: {_lm}\n")
+                            if _lw:
+                                f.write(f"LoRA strengths: {_lw}\n")
                     seed = lz_pipe.get("seed")
                     if seed is not None:
                         f.write(f"Seed: {seed}\n")
