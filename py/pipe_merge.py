@@ -1,5 +1,7 @@
 # pipe_merge.py
 
+from .utils import get_pipe_loras, set_pipe_loras
+
 class LZPipeMerge:
     @classmethod
     def INPUT_TYPES(s):
@@ -28,5 +30,14 @@ class LZPipeMerge:
                 if key not in merged or merged[key] is None:
                     if value is not None:
                         merged[key] = value
-        
+
+        # 複数 LoRA 対応: 両 pipe の LoRA は結合して文字列も再同期する
+        try:
+            main_loras = get_pipe_loras(lz_pipe_main if isinstance(lz_pipe_main, dict) else {})
+            sub_loras = get_pipe_loras(lz_pipe_sub if isinstance(lz_pipe_sub, dict) else {})
+            if main_loras or sub_loras:
+                set_pipe_loras(merged, list(main_loras) + list(sub_loras))
+        except Exception:
+            pass
+
         return (merged,)
