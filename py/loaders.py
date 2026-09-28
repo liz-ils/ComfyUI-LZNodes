@@ -3,7 +3,7 @@
 import folder_paths
 import comfy.sd
 import comfy.utils
-from .utils import get_checkpoint_hash
+from .utils import get_checkpoint_hash, get_pipe_loras, set_pipe_loras
 
 # LoRAウェイトキャッシュの上限(フルウェイト保持のため無制限にしない)
 LORA_CACHE_MAX = 32
@@ -153,6 +153,9 @@ class LZLoRALoaderModelOnly:
 
 
 class LZLoRAStacker:
+    """複数 LoRA スタッカー。lora_count で有効スロット数を調整できる。"""
+    MAX_LORAS = 10
+
     def __init__(self):
         self.loaded_loras = {}
 
@@ -160,19 +163,21 @@ class LZLoRAStacker:
     def INPUT_TYPES(s):
         loras = ["None"] + (folder_paths.get_filename_list("loras") or [])
         inputs = {
-            "required": {},
+            "required": {
+                "lora_count": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+            },
             "optional": {
                 "lz_pipe": ("LZ_PIPE",),
                 "model": ("MODEL",),
                 "clip": ("CLIP",),
             }
         }
-        
+
         for i in range(1, 11):
-            inputs["required"][f"lora_{i}"] = (loras, {"default": "None"})
-            inputs["required"][f"model_weight_{i}"] = ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01})
-            inputs["required"][f"clip_weight_{i}"] = ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01})
-            
+            inputs["optional"][f"lora_{i}"] = (loras, {"default": "None"})
+            inputs["optional"][f"model_weight_{i}"] = ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01})
+            inputs["optional"][f"clip_weight_{i}"] = ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01})
+
         return inputs
 
     RETURN_TYPES = ("MODEL", "CLIP", "LZ_PIPE", "STRING", "STRING")
@@ -180,58 +185,146 @@ class LZLoRAStacker:
     FUNCTION = "load_loras"
     CATEGORY = "MyCustomNodes/Loaders"
 
-    def load_loras(self, **kwargs):
+    def load_loras(self, lora_count=1, **kwargs):
         # lz_pipeが繋がれていない場合の対策
         lz_pipe = kwargs.get("lz_pipe")
         if lz_pipe is None:
             lz_pipe = {}
-        
+
         model = kwargs.get("model", lz_pipe.get("model"))
         clip = kwargs.get("clip", lz_pipe.get("clip"))
-        
+
         if model is None or clip is None:
             raise ValueError("LZ LoRA Stacker Error: MODEL and CLIP must be connected directly or provided via lz_pipe.")
 
-        used_loras = []
-        for i in range(1, 11):
+        try:
+            lora_count = int(lora_count)
+        except Exception:
+            lora_count = 1
+        lora_count = max(1, min(self.MAX_LORAS, lora_count))
+
+        # 旧ワークフロー互換: count より後ろに有効な LoRA があればそこまで処理する
+        highest = lora_count
+        for i in range(self.MAX_LORAS, lora_count, -1):
+            if kwargs.get(f"lora_{i}", "None") not in (None, "None", ""):
+                highest = i
+                break
+        effective = max(lora_count, highest)
+
+        # 既存 pipe の LoRA は引き継いで追記する(複数スタック/チェーン対応)
+        all_loras = list(get_pipe_loras(lz_pipe))
+
+        for i in range(1, effective + 1):
             lora_name = kwargs.get(f"lora_{i}", "None")
-            if lora_name != "None":
-                model_weight = kwargs.get(f"model_weight_{i}", 1.0)
-                clip_weight = kwargs.get(f"clip_weight_{i}", 1.0)
-                
-                if model_weight == 0 and clip_weight == 0:
-                    continue
+            if lora_name in (None, "", "None"):
+                continue
+            model_weight = kwargs.get(f"model_weight_{i}", 1.0)
+            clip_weight = kwargs.get(f"clip_weight_{i}", 1.0)
 
-                lora_path = folder_paths.get_full_path("loras", lora_name)
-                if lora_path is None:
-                    # LoRAが見つからなかった場合は使用済みとして記録しない
-                    continue
-                lora = _lora_cache_get(self.loaded_loras, lora_path)
-                if lora is None:
-                    lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-                    _lora_cache_put(self.loaded_loras, lora_path, lora)
+            if model_weight == 0 and clip_weight == 0:
+                continue
 
-                model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
-                used_loras.append((lora_name, model_weight, clip_weight))
-        
+            lora_path = folder_paths.get_full_path("loras", lora_name)
+            if lora_path is None:
+                # LoRAが見つからなかった場合は使用済みとして記録しない
+                continue
+            lora = _lora_cache_get(self.loaded_loras, lora_path)
+            if lora is None:
+                lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+                _lora_cache_put(self.loaded_loras, lora_path, lora)
+
+            model, clip = comfy.sd.load_lora_for_models(model, clip, lora, model_weight, clip_weight)
+            all_loras.append({"name": lora_name, "model_weight": model_weight, "clip_weight": clip_weight})
+
         # 適用された最新のモデルとCLIPでパイプを更新
         new_pipe = lz_pipe.copy() if lz_pipe else {}
         new_pipe["model"] = model
         new_pipe["clip"] = clip
 
-        if used_loras:
-            model_names = ", ".join([n for n, _, _ in used_loras])
-            # modelとclipで重みが異なる場合は "m:c" 形式で両方残す
-            weight_strs = []
-            for _, m, c in used_loras:
-                if abs(float(m) - float(c)) < 1e-9:
-                    weight_strs.append(str(m))
-                else:
-                    weight_strs.append(f"{m}:{c}")
-            model_weights = ", ".join(weight_strs)
-            new_pipe["lora_name"] = model_names
-            new_pipe["lora_strength"] = model_weights
-            new_pipe["lora_model"] = model_names
-            new_pipe["lora_weight"] = model_weights
+        if all_loras:
+            set_pipe_loras(new_pipe, all_loras)
 
         return (model, clip, new_pipe, new_pipe.get("lora_model", ""), new_pipe.get("lora_weight", ""))
+
+
+class LZLoRAStackerModelOnly:
+    """MODEL のみに複数 LoRA を適用するスタッカー。CLIP には触れない。"""
+
+    MAX_LORAS = 10
+
+    def __init__(self):
+        self.loaded_loras = {}
+
+    @classmethod
+    def INPUT_TYPES(s):
+        loras = ["None"] + (folder_paths.get_filename_list("loras") or [])
+        inputs = {
+            "required": {
+                "lora_count": ("INT", {"default": 1, "min": 1, "max": 10, "step": 1}),
+            },
+            "optional": {
+                "lz_pipe": ("LZ_PIPE",),
+                "model": ("MODEL",),
+            }
+        }
+
+        for i in range(1, 11):
+            inputs["optional"][f"lora_{i}"] = (loras, {"default": "None"})
+            inputs["optional"][f"strength_model_{i}"] = ("FLOAT", {"default": 1.0, "min": -10.0, "max": 10.0, "step": 0.01})
+
+        return inputs
+
+    RETURN_TYPES = ("MODEL", "LZ_PIPE", "STRING", "STRING")
+    RETURN_NAMES = ("MODEL", "lz_pipe", "lora_model", "lora_weight")
+    FUNCTION = "load_loras"
+    CATEGORY = "MyCustomNodes/Loaders"
+
+    def load_loras(self, lora_count=1, **kwargs):
+        lz_pipe = kwargs.get("lz_pipe")
+        if lz_pipe is None:
+            lz_pipe = {}
+
+        model = kwargs.get("model", lz_pipe.get("model"))
+        if model is None:
+            raise ValueError("LZ LoRA Stacker (Model Only) Error: MODEL must be connected directly or provided via lz_pipe.")
+
+        try:
+            lora_count = int(lora_count)
+        except Exception:
+            lora_count = 1
+        lora_count = max(1, min(self.MAX_LORAS, lora_count))
+
+        highest = lora_count
+        for i in range(self.MAX_LORAS, lora_count, -1):
+            if kwargs.get(f"lora_{i}", "None") not in (None, "None", ""):
+                highest = i
+                break
+        effective = max(lora_count, highest)
+
+        all_loras = list(get_pipe_loras(lz_pipe))
+
+        for i in range(1, effective + 1):
+            lora_name = kwargs.get(f"lora_{i}", "None")
+            if lora_name in (None, "", "None"):
+                continue
+            strength = kwargs.get(f"strength_model_{i}", 1.0)
+            if strength == 0:
+                continue
+
+            lora_path = folder_paths.get_full_path("loras", lora_name)
+            if lora_path is None:
+                continue
+            lora = _lora_cache_get(self.loaded_loras, lora_path)
+            if lora is None:
+                lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+                _lora_cache_put(self.loaded_loras, lora_path, lora)
+
+            model, _ = comfy.sd.load_lora_for_models(model, None, lora, strength, 0)
+            all_loras.append({"name": lora_name, "model_weight": strength, "clip_weight": strength})
+
+        new_pipe = lz_pipe.copy() if lz_pipe else {}
+        new_pipe["model"] = model
+        if all_loras:
+            set_pipe_loras(new_pipe, all_loras)
+
+        return (model, new_pipe, new_pipe.get("lora_model", ""), new_pipe.get("lora_weight", ""))
