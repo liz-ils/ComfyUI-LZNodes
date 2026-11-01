@@ -1,135 +1,41 @@
 # ComfyUI-LZNodes
 
-ComfyUI-LZNodes is a collection of custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) designed to simplify complex node workflows and enhance the image generation process.
+[![Release](https://img.shields.io/github/v/release/liz-ils/ComfyUI-LZNodes?style=flat-square)](https://github.com/liz-ils/ComfyUI-LZNodes/releases)
+[![License: MIT](https://img.shields.io/github/license/liz-ils/ComfyUI-LZNodes?style=flat-square)](LICENSE)
+![Python](https://img.shields.io/badge/Python-%3E%3D3.10-blue?style=flat-square)
 
-[日本語版 (Japanese Version)](README_ja.md)
+**English** | [日本語](README_ja.md)
 
-## Features
+A collection of 47 custom nodes for [ComfyUI](https://github.com/comfyanonymous/ComfyUI) that simplifies complex node wiring and streamlines image generation: a pipe system that bundles models and parameters into a single connection, smart Checkpoint / LoRA / Anima / Krea 2 loaders, prompt management, XY plot comparison, and image saving with detailed generation logs.
 
-This extension provides several quality-of-life nodes that condense common workflows:
+## Requirements
 
-*   **LZ Pipe System (`LZPipePack` / `LZPipePackXL` / `LZPipeUnpack` / `LZPipeMerge` / `LZPipeInfo`)**: Simplifies "spaghetti" node connections by bundling `MODEL`, `CLIP`, `VAE`, `CONDITIONING`, `LATENT`, and generation parameters into a single `lz_pipe` connection.
-*   **Smart Loaders**:
-    *   `LZCheckpointLoader`: Loads a checkpoint and automatically encodes positive/negative prompts in a single node.
-    *   `LZSimpleCheckpointLoader`: A lightweight loader strictly for extracting model components.
-    *   `LZLoRAStacker`: Easily stack up to 10 LoRAs with built-in caching for faster generation. Outputs `lora_model` / `lora_weight` (comma-joined names/weights, also carried in `lz_pipe`).
-    *   `LZAnimaLoader`: Specialized loader for Anima models that loads the diffusion model, text encoder, and VAE separately.
-    *   `LZKrea2Loader`: One-node loader for the Krea 2 architecture (12B SingleStreamDiT + Qwen3-VL-4B text encoder + Qwen-Image VAE). Pipe-ready with `weight_dtype` selection, and `negative_mode="auto"` zero-outs the negative when unused (Krea 2 Turbo runs at CFG 1.0, matching the official template). Requires ComfyUI v0.26.0+.
-*   **Anima Artist Mixer**:
-    *   `LZAnimaArtistNode`: Combined node that splits/encodes artist chains and applies cross-attention injection in one step. Outputs `(MODEL, CONDITIONING, STRING)` with the base prompt text as `positive_text` for direct connection to the pipe system.
-    *   `LZAnimaArtistPack` / `LZAnimaArtistCrossAttn`: Separate split-encode and cross-attn injection nodes for advanced workflows. `LZAnimaArtistCrossAttn` also outputs `positive_text` (STRING).
-    *   `LZAnimaArtistOptions`: Advanced options for fine-tuning block ranges, fusion modes, EMA smoothing, low-rank injection, static capture, and anchor Q.
-    *   `LZArtistChainText`: Green-colored helper node for the `artist_chain` input. Converts a line-separated artist list into a comma-joined `artist_tag` (and also outputs the original text and the `lz_pipe` unchanged).
-*   **Prompt Management**:
-    *   `AdvancedPositivePrompt` / `AdvancedNegativePrompt`: Cleanly separate base prompts, artist tags, and quality tags. Automatically concatenates and encodes them.
-    *   `DualCLIPTextEncode`: Encodes both positive and negative prompts simultaneously.
-    *   `LZPromptWeight`: Automatically wraps prompt tags with weight syntax `(tag:weight)`.
-    *   `LZTagEditor`: Visually edit up to 10 tags with individual strength and on/off toggles.
-    *   `LZPromptReplaceSingle` / `LZPromptReplaceMulti` / `LZPromptReplaceString`: Dynamically replace placeholders in prompts using txt/csv/json files or inline candidate lists. Seeded (`seed`, `-1` = random each run).
-    *   `LZPromptPick`: Pick multiple tags from up to two files plus inline candidates, with random weights (`weight_min/max`), no-duplicate mode (`unique`, default ON), and seeded control.
-*   **Text Utilities**:
-    *   `StringNode` / `StringConcatNode`: Basic string output and multi-input concatenation.
-    *   `LZTextPreview`: Display string values directly in the node UI.
-    *   `LZStringSanitize`: Remove or replace illegal filename characters.
-    *   `LZStringSelect`: Select one string from multiple inputs by index.
-    *   `LZSaveStringToCSV`: Save or append string rows to a CSV file (header written only when the file is created).
-*   **All-In-One Sampling (`LZKSamplerDecode`)**: Combines KSampler and VAEDecode into a single step, pulling directly from the `lz_pipe` routing. It can also accept raw text and perform CLIP encoding dynamically if conditioning isn't explicitly provided.
-*   **XY Plot System (`LZXYPlot` / `LZXYPlotSampler` / `LZXYSampler` / `LZXYGridOutput`)**: Grid comparison system for checkpoints, diffusion models (DiT-only, e.g. Krea 2 / Anima / Flux), LoRAs, samplers, schedulers, and prompt variations. Supports replacement keys and automatic grid image generation with labels.
-*   **Comprehensive Image Saving & Logging**:
-    *   `LZSaveImageAndLog`: Saves generated images (PNG/WEBP/JPG) alongside a highly detailed `.txt` log file capturing everything from Seed and Steps to Checkpoint Hash and full Prompt text. It also injects this data into PNG metadata invisibly.
-    *   `LZBatchSaveWithLabels`: Batch-save images with XY labels embedded in filenames and metadata, plus automatic batch log output.
-    *   `LZAppendLogToCSV`: Append generation parameters to a CSV file for spreadsheet tracking.
-    *   `LZLogReader`: Read back `.txt` log files generated by `LZSaveImageAndLog` to restore parameters as node outputs.
-*   **Model Merge Recipe (`LZMergeRecipeRandom` / `LZMergeRecipeManual` / `LZMergeRecipeRandomAdvanced`)**: Generate 19-block merge recipes (IN00-IN08, M00, OUT00-OUT08) compatible with Model Merge tools.
-*   **Preset Latent (`PresetEmptyLatentImage`)**: Quickly create empty latent images using common SDXL resolutions. Supports both SDXL (4ch) and Anima (16ch) latent formats.
-
-## Node List
-
-| Category | Nodes |
-|---|---|
-| **Loaders** | LZCheckpointLoader, LZSimpleCheckpointLoader, LZLoRAStacker, LZAnimaLoader, LZKrea2Loader |
-| **Anima** | LZAnimaArtistNode, LZAnimaArtistPack, LZAnimaArtistCrossAttn, LZAnimaArtistOptions, LZArtistChainText |
-| **Prompt** | DualCLIPTextEncode, AdvancedPositivePrompt, AdvancedNegativePrompt, LZPromptWeight, LZTagEditor |
-| **Text** | StringNode, StringConcatNode, LZTextPreview, LZStringSanitize, LZStringSelect, LZSaveStringToCSV, LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString, LZPromptPick |
-| **Latent** | PresetEmptyLatentImage |
-| **Pipe** | LZPipePack, LZPipePackXL, LZPipeUnpack, LZPipeInfo, LZPipeMerge |
-| **Sampling** | LZKSamplerDecode |
-| **XY Plot** | LZXYPlot, LZXYPlotSampler, LZXYSampler, LZXYGridOutput |
-| **IO** | LZSaveImageAndLog, LZBatchSaveWithLabels |
-| **Log** | LZAppendLogToCSV, LZLogReader |
-| **Merge** | LZMergeRecipeRandom, LZMergeRecipeManual, LZMergeRecipeRandomAdvanced |
-
-## Krea 2 Quick Guide
-
-`LZKrea2Loader` supports the [Krea 2](https://huggingface.co/krea/Krea-2-Turbo) architecture natively (requires **ComfyUI v0.26.0+**).
-
-**Model files** (download the ComfyUI-repackaged versions from [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2)):
-
-| Type | File example | Folder |
-|---|---|---|
-| Diffusion model (DiT) | `krea2_turbo_fp8_scaled.safetensors` | `models/diffusion_models` |
-| Text encoder | `qwen3vl_4b_fp8_scaled.safetensors` | `models/text_encoders` |
-| VAE | `qwen_image_vae.safetensors` | `models/vae` |
-| Style LoRAs (optional) | `krea2_darkbrush.safetensors` etc. | `models/loras` |
-
-**Recommended settings** (per the official [krea-2](https://github.com/krea-ai/krea-2) repository):
-
-| Variant | Steps | CFG | Sampler | Scheduler |
-|---|---|---|---|---|
-| Krea 2 **Turbo** | 8 | 1.0 | euler | simple |
-| Krea 2 **Raw** | 52 | 3.5 | euler | simple |
-
-*   Krea 2 Turbo is guidance-distilled: negative prompts have no effect at CFG 1.0. `negative_mode="auto"` (default) zero-outs the positive as the negative, matching the official template's `ConditioningZeroOut` pattern and skipping wasted text-encoder work.
-*   Sizes from 1K to 2K are supported. Use `PresetEmptyLatentImage` (16ch mode) or the built-in `ResolutionSelector` node connected to its `width`/`height` inputs.
-*   For XY plots with Krea 2, use the `diffusion_model` axis (the `checkpoint` axis only loads full checkpoints).
-*   For negative prompts on Turbo, community nodes such as [ComfyUI-krea2-negpip](https://github.com/blue-pen5805/ComfyUI-krea2-negpip) can be used alongside this pack.
+- ComfyUI — a recent version is recommended. The Krea 2 nodes require **v0.26.0 or later**.
+- Python 3.10 or later (the Python used by ComfyUI is fine).
+- No additional packages: this pack only uses libraries that ship with ComfyUI (PyTorch, NumPy, Pillow).
 
 ## Installation
 
-1. Navigate to your ComfyUI `custom_nodes` directory:
-   ```bash
-   cd ComfyUI/custom_nodes
-   ```
-2. Clone this repository:
-   ```bash
-   git clone https://github.com/liz-ils/ComfyUI-LZNodes
-   ```
-3. Restart ComfyUI.
+**ComfyUI-Manager (recommended):** search for **ComfyUI-LZNodes** in "Install Custom Nodes", install it, and restart ComfyUI. The pack is also published on the Comfy Registry.
 
-## Usage
+**git clone:**
 
-Once installed, the nodes can be found in the ComfyUI add-node menu under the `MyCustomNodes` category (e.g., `MyCustomNodes/Loaders`, `MyCustomNodes/Prompt`, `MyCustomNodes/Sampling`, etc.).
+```bash
+cd ComfyUI/custom_nodes
+git clone https://github.com/liz-ils/ComfyUI-LZNodes
+```
 
-*Tip: A great starting point is connecting an `LZCheckpointLoader` through an `LZPipePack` to an `LZKSamplerDecode`, and finishing with `LZSaveImageAndLog`.*
+Then restart ComfyUI. To update, use the Manager's Update function, or run `git pull` in the `ComfyUI-LZNodes` folder and restart.
+
+## Documentation
+
+- [Node Reference](docs/nodes.md) — all 47 nodes: the full list, display names, categories, and what each node does.
+- [Krea 2 Quick Guide](docs/krea2.md) — model file placement and recommended settings for `LZKrea2Loader`.
+- [Merge Recipe Nodes](docs/merge-recipe.md) — inputs and outputs of the merge recipe nodes.
+- [Third-Party Licenses](docs/third-party-licenses.md) — license notices for included third-party code.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License — see the [LICENSE](LICENSE) file. Version history is on the [Releases](https://github.com/liz-ils/ComfyUI-LZNodes/releases) page.
 
-## About Third-Party Nodes
-**Anima Artist Mixer** - `LZAnimaArtistNode`, `LZAnimaArtistPack`, `LZAnimaArtistCrossAttn`, and `LZAnimaArtistOptions` are modified versions of the code from [Anima-Artist-Mixer](https://github.com/An1X3R/Anima-Artist-Mixer) (by An1X3R and 汐浮尘).
-- Used under the MIT License:
-
-```
-MIT License
-
-Copyright (c) 2026 An1X3R and 汐浮尘
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+The Anima Artist Mixer nodes are based on [Anima-Artist-Mixer](https://github.com/An1X3R/Anima-Artist-Mixer) by An1X3R and 汐浮尘 (MIT License). See [Third-Party Licenses](docs/third-party-licenses.md).
