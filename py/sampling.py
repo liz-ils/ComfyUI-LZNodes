@@ -16,13 +16,15 @@ class LZKSamplerDecode:
                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS, ),
                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS, ),
                 "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                "model_preset": (["Auto/SDXL", "Anima", "Krea2 (Turbo)", "Krea2 (Raw)"], {
+                "model_preset": (["Auto/SDXL", "Anima", "Krea2 (Turbo)", "Krea2 (Raw)", "MOSS Image (SFT)", "MOSS Image (Base)"], {
                     "default": "Auto/SDXL",
                     "tooltip": (
                         "Krea2 (Turbo): recommended 8 steps / CFG 1.0 / euler / simple. "
                         "If no negative is connected, the positive is zeroed-out as negative "
                         "(official template behaviour; CFG 1.0 ignores negatives).\n"
-                        "Krea2 (Raw): recommended 52 steps / CFG 3.5. A real negative is required."
+                        "Krea2 (Raw): recommended 52 steps / CFG 3.5. A real negative is required.\n"
+                        "MOSS Image (SFT): template 25 steps / CFG 2.5 / er_sde / simple. "
+                        "MOSS Image (Base): official 50 steps / CFG 3.0 / euler."
                     )
                 }),
             },
