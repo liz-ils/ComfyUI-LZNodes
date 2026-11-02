@@ -5,6 +5,7 @@ from .py.loaders import LZCheckpointLoader, EZCheckpointLoader, LZSimpleCheckpoi
 from .py.dynamic_prompt import LZPromptReplaceSingle, LZPromptReplaceMulti, LZPromptReplaceString, LZPromptPick
 from .py.anima_loader import LZAnimaLoader
 from .py.krea2_loader import LZKrea2Loader
+from .py.moss_loader import LZMossImageLoader
 from .py.artist_chain_text import LZArtistChainText
 from .py.anima_artist_mixer import LZAnimaArtistPack, LZAnimaArtistOptions, LZAnimaArtistCrossAttn, LZAnimaArtistNode
 from .py.latent import PresetEmptyLatentImage
@@ -46,6 +47,7 @@ NODE_CLASS_MAPPINGS = {
     "LZSimpleCheckpointLoader": LZSimpleCheckpointLoader,
     "LZAnimaLoader": LZAnimaLoader,
     "LZKrea2Loader": LZKrea2Loader,
+    "LZMossImageLoader": LZMossImageLoader,
     "LZArtistChainText": LZArtistChainText,
     "LZAnimaArtistPack": LZAnimaArtistPack,
     "LZAnimaArtistOptions": LZAnimaArtistOptions,
@@ -96,6 +98,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "LZSimpleCheckpointLoader": "LZ Simple Checkpoint Loader",
     "LZAnimaLoader": "LZ Anima Loader",
     "LZKrea2Loader": "LZ Krea2 Loader",
+    "LZMossImageLoader": "LZ MOSS Image Loader",
     "LZArtistChainText": "LZ Artist Chain Text",
     "LZAnimaArtistPack": "LZ Anima Artist Pack (Split + Encode)",
     "LZAnimaArtistOptions": "LZ Anima Artist Options (Advanced)",

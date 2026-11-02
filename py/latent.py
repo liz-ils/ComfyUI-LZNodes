@@ -25,7 +25,7 @@ class PresetEmptyLatentImage:
                     {"default": "1024 x 1024"}
                 ),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 64}),
-                "channel_mode": (["SDXL (4ch)", "Anima (16ch)", "Krea2 (16ch)"], {"default": "SDXL (4ch)"}),
+                "channel_mode": (["SDXL (4ch)", "Anima (16ch)", "Krea2 (16ch)", "MOSS Image / Flux2 (128ch)"], {"default": "SDXL (4ch)"}),
             },
             "optional": {
                 "width": ("INT", {"forceInput": True, "tooltip": "Optional override (e.g. from ResolutionSelector)."}),
@@ -46,7 +46,11 @@ class PresetEmptyLatentImage:
         w = int(width) if width is not None and int(width) > 0 else preset_w
         h = int(height) if height is not None and int(height) > 0 else preset_h
 
-        channels = 16 if channel_mode in ("Anima (16ch)", "Krea2 (16ch)") else 4
-        latent = torch.zeros([batch_size, channels, h // 8, w // 8])
+        # MOSS Image / Flux2 は //16・128ch (EmptyFlux2LatentImage 準拠)。それ以外は //8。
+        if channel_mode == "MOSS Image / Flux2 (128ch)":
+            latent = torch.zeros([batch_size, 128, h // 16, w // 16])
+        else:
+            channels = 16 if channel_mode in ("Anima (16ch)", "Krea2 (16ch)") else 4
+            latent = torch.zeros([batch_size, channels, h // 8, w // 8])
 
         return ({"samples": latent}, w, h)
